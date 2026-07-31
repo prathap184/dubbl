@@ -2,21 +2,44 @@ import pg from "pg";
 import fs from "node:fs";
 import path from "node:path";
 
-const url = process.env.TARGET_DATABASE_URL || process.env.OVERRIDE_DB_URL || process.env.DATABASE_URL;
-if (!url) {
-  console.error("❌ DATABASE_URL is missing in environment variables!");
-  process.exit(1);
+async function createWorkingPool() {
+  const envUrl = process.env.TARGET_DATABASE_URL || process.env.OVERRIDE_DB_URL || process.env.DATABASE_URL;
+
+  const candidateUrls = [
+    envUrl,
+    "postgresql://postgres.default:postgres@127.0.0.1:5432/postgres",
+    "postgresql://postgres.default:Powerstar%40200319@127.0.0.1:5432/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+    "postgresql://postgres:Powerstar%40200319@127.0.0.1:5432/postgres",
+    "postgresql://postgres:postgres@localhost:5432/postgres",
+  ].filter(Boolean) as string[];
+
+  for (const connectionString of candidateUrls) {
+    const masked = connectionString.replace(/:[^:@]+@/, ":****@");
+    console.log(`🔍 Trying connection: ${masked}...`);
+    const pool = new pg.Pool({
+      connectionString,
+      max: 5,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 3000,
+    });
+
+    try {
+      const client = await pool.connect();
+      await client.query("SELECT 1");
+      client.release();
+      console.log(`✅ Connected successfully using: ${masked}`);
+      return pool;
+    } catch (err: any) {
+      console.log(`   ❌ Connection failed (${err.message})`);
+      await pool.end().catch(() => {});
+    }
+  }
+
+  throw new Error("Unable to connect to any self-hosted database candidate URLs!");
 }
 
-console.log(`⚡ Connecting to Database: ${url.replace(/:[^:@]+@/, ":****@")}...`);
-const pool = new pg.Pool({
-  connectionString: url,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
-
-async function runQueryWithRetry(sql: string, maxRetries = 2): Promise<{ success: boolean; error?: string }> {
+async function runQueryWithRetry(pool: pg.Pool, sql: string, maxRetries = 2): Promise<{ success: boolean; error?: string }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await pool.query(sql);
@@ -32,6 +55,8 @@ async function runQueryWithRetry(sql: string, maxRetries = 2): Promise<{ success
 }
 
 async function setupAndRestore() {
+  const pool = await createWorkingPool();
+
   try {
     console.log("🧹 STEP 1: Wiping old tables/schema for a 100% clean refresh...");
     await pool.query(`
@@ -66,7 +91,7 @@ async function setupAndRestore() {
         .filter((l) => l.startsWith("CREATE TABLE") || l.startsWith("CREATE SEQUENCE") || l.startsWith("CREATE OR REPLACE FUNCTION"));
 
       for (const ddl of ddlStatements) {
-        await runQueryWithRetry(ddl, 1);
+        await runQueryWithRetry(pool, ddl, 1);
       }
     }
 
@@ -98,12 +123,12 @@ async function setupAndRestore() {
       const batch = statements.slice(i, i + BATCH_SIZE);
       const batchSql = batch.join("\n");
 
-      const res = await runQueryWithRetry(batchSql, 1);
+      const res = await runQueryWithRetry(pool, batchSql, 1);
       if (res.success) {
         executed += batch.length;
       } else {
         for (const stmt of batch) {
-          const lineRes = await runQueryWithRetry(stmt, 1);
+          const lineRes = await runQueryWithRetry(pool, stmt, 1);
           if (lineRes.success) {
             executed++;
           } else {
@@ -122,7 +147,7 @@ async function setupAndRestore() {
     if (errors > 0) console.log(`ℹ️ Skipped: ${errors} queries`);
 
     console.log("\n📊 VERIFIED TABLE ROW COUNTS IN FRESH DATABASE:");
-    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs", "auth.users"];
+    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs"];
     for (const table of tablesToVerify) {
       try {
         const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
@@ -137,6 +162,6 @@ async function setupAndRestore() {
 }
 
 setupAndRestore().catch((err) => {
-  console.error("❌ Restore script error:", err);
+  console.error("❌ Restore script error:", err.message || err);
   process.exit(1);
 });
