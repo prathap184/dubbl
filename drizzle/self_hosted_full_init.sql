@@ -14,6 +14,8 @@ GRANT ALL ON SCHEMA "public" TO public;
 CREATE SCHEMA IF NOT EXISTS "auth";
 GRANT ALL ON SCHEMA "auth" TO postgres;
 GRANT ALL ON SCHEMA "auth" TO public;
+GRANT ALL ON ALL TABLES IN SCHEMA "auth" TO postgres;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA "auth" TO postgres;
 
 
 -- Migration: 0000_baseline.sql
@@ -3654,8 +3656,8 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "eyeletPricing" "jsonb",
     "deliveryPricing" "jsonb",
     "workflowSteps" "jsonb",
-    "createdAt" "jsonb",
-    "updatedAt" "jsonb",
+    "createdAt" timestamp with time zone,
+    "updatedAt" timestamp with time zone,
     "categoryName" "text",
     "description" "text",
     "imageUrl" "text",
@@ -3941,7 +3943,7 @@ CREATE TABLE IF NOT EXISTS "public"."role_history" (
     "changedBy" "text",
     "changedByName" "text",
     "action" "text",
-    "changedAt" "jsonb"
+    "changedAt" timestamp with time zone
 );
 
 -- INSERT DATA FOR products
@@ -8927,83 +8929,6 @@ INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "r
 INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "revoked", "created_at", "updated_at", "parent", "session_id") VALUES ('00000000-0000-0000-0000-000000000000', '18', 'fiqxa7vakhii', 'a3e5b543-ba3b-446c-8829-3abc0f82d5c8', true, '2026-07-31T09:22:25.876Z', '2026-07-31T11:11:33.454Z', 'bwxvexipldxx', 'e9e57a49-070a-4ce3-aa5a-5a6417514e27') ON CONFLICT DO NOTHING;
 INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "revoked", "created_at", "updated_at", "parent", "session_id") VALUES ('00000000-0000-0000-0000-000000000000', '19', 'uvvbu7rynntx', 'a3e5b543-ba3b-446c-8829-3abc0f82d5c8', true, '2026-07-31T11:11:33.474Z', '2026-07-31T12:16:45.814Z', 'fiqxa7vakhii', 'e9e57a49-070a-4ce3-aa5a-5a6417514e27') ON CONFLICT DO NOTHING;
 INSERT INTO "auth"."refresh_tokens" ("instance_id", "id", "token", "user_id", "revoked", "created_at", "updated_at", "parent", "session_id") VALUES ('00000000-0000-0000-0000-000000000000', '20', '2xtn4mkg4run', 'a3e5b543-ba3b-446c-8829-3abc0f82d5c8', false, '2026-07-31T12:16:45.833Z', '2026-07-31T12:16:45.833Z', 'uvvbu7rynntx', 'e9e57a49-070a-4ce3-aa5a-5a6417514e27') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20171026211738') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20171026211808') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20171026211834') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20180103212743') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20180108183307') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20180119214651') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20180125194653') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('00') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20210710035447') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20210722035447') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20210730183235') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20210909172000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20210927181326') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20211122151130') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20211124214934') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20211202183645') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220114185221') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220114185340') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220224000811') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220323170000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220429102000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220531120530') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220614074223') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20220811173540') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221003041349') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221003041400') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221011041400') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221020193600') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221021073300') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221021082433') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221027105023') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221114143122') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221114143410') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221125140132') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221208132122') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221215195500') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221215195800') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20221215195900') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230116124310') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230116124412') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230131181311') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230322519590') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230402418590') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230411005111') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230508135423') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230523124323') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230818113222') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20230914180801') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20231027141322') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20231114161723') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20231117164230') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240115144230') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240214120130') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240306115329') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240314092811') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240427152123') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240612123726') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240729123726') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240802193726') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20240806073726') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20241009103726') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250717082212') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250731150234') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250804100000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250901200500') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250903112500') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250904133000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20250925093508') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20251007112900') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20251104100000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20251111201300') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20251201000000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20260115000000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20260121000000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20260219120000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20260302000000') ON CONFLICT DO NOTHING;
-INSERT INTO "auth"."schema_migrations" ("version") VALUES ('20260625000000') ON CONFLICT DO NOTHING;
 INSERT INTO "auth"."sessions" ("id", "user_id", "created_at", "updated_at", "factor_id", "aal", "not_after", "refreshed_at", "user_agent", "ip", "tag", "oauth_client_id", "refresh_token_hmac_key", "refresh_token_counter", "scopes") VALUES ('ab46f07c-ec66-4629-8ec6-199f99894b88', '3600228f-a748-4471-a97e-0532915be0fe', '2026-07-25T16:36:23.774Z', '2026-07-25T16:36:23.774Z', NULL, 'aal1', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '152.57.73.182', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO "auth"."sessions" ("id", "user_id", "created_at", "updated_at", "factor_id", "aal", "not_after", "refreshed_at", "user_agent", "ip", "tag", "oauth_client_id", "refresh_token_hmac_key", "refresh_token_counter", "scopes") VALUES ('d7826b39-9ace-40ee-8588-d5754a198601', '3600228f-a748-4471-a97e-0532915be0fe', '2026-07-25T16:37:18.675Z', '2026-07-25T16:37:18.675Z', NULL, 'aal1', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '152.57.73.182', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;
 INSERT INTO "auth"."sessions" ("id", "user_id", "created_at", "updated_at", "factor_id", "aal", "not_after", "refreshed_at", "user_agent", "ip", "tag", "oauth_client_id", "refresh_token_hmac_key", "refresh_token_counter", "scopes") VALUES ('44bbbd0b-2914-471a-9b50-d3c2df86df22', '3600228f-a748-4471-a97e-0532915be0fe', '2026-07-25T16:44:45.748Z', '2026-07-25T16:44:45.748Z', NULL, 'aal1', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '152.57.73.182', NULL, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING;

@@ -24,6 +24,8 @@ GRANT ALL ON SCHEMA "public" TO public;
 CREATE SCHEMA IF NOT EXISTS "auth";
 GRANT ALL ON SCHEMA "auth" TO postgres;
 GRANT ALL ON SCHEMA "auth" TO public;
+GRANT ALL ON ALL TABLES IN SCHEMA "auth" TO postgres;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA "auth" TO postgres;
 
 `;
 
@@ -47,14 +49,22 @@ for (const file of migrationFiles) {
   }
 }
 
-// Step 2: Append ERP DDL Statements
+// Step 2: Append ERP DDL Statements (with jsonb timestamp fix)
 let erpPath = "";
 if (fs.existsSync(erpDumpPath1)) erpPath = erpDumpPath1;
 else if (fs.existsSync(erpDumpPath2)) erpPath = erpDumpPath2;
 
 if (erpPath) {
   console.log(`Adding ERP DDL from: ${erpPath}`);
-  const erpSql = fs.readFileSync(erpPath, "utf8");
+  let erpSql = fs.readFileSync(erpPath, "utf8");
+
+  // Fix mis-typed timestamp columns in ERP DDL that were typed as jsonb
+  erpSql = erpSql
+    .replace(/"createdAt"\s+"jsonb"/gi, '"createdAt" timestamp with time zone')
+    .replace(/"updatedAt"\s+"jsonb"/gi, '"updatedAt" timestamp with time zone')
+    .replace(/"changedAt"\s+"jsonb"/gi, '"changedAt" timestamp with time zone')
+    .replace(/"changedat"\s+"jsonb"/gi, '"changedat" timestamp with time zone');
+
   fullSql += `\n-- Precision Press ERP DDL\n` + erpSql + "\n";
 }
 
@@ -96,10 +106,10 @@ if (fs.existsSync(backupPath)) {
       let colType = "text";
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
-      if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics")) {
-        colType = "jsonb";
-      } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
+      if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
+      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics")) {
+        colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("count") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit")) {
         colType = "numeric";
       }
@@ -107,7 +117,7 @@ if (fs.existsSync(backupPath)) {
     }
   }
 
-  // Step 4: Transform Backup Inserts (Fix auth.users generated column confirmed_at & prioritize parent tables)
+  // Step 4: Transform Backup Inserts
   console.log("Transforming backup data insert statements...");
   fullSql += `\n-- =============================================================================\n`;
   fullSql += `-- Backup Data Insert Statements\n`;
@@ -135,10 +145,17 @@ if (fs.existsSync(backupPath)) {
   ]);
 
   let fixedAuthUsersCount = 0;
+  let skippedSchemaMigrationsCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
     if (!line.trim() || line.trim().startsWith("--")) continue;
+
+    // Skip auth.schema_migrations inserts to avoid permission errors
+    if (line.includes('INSERT INTO "auth"."schema_migrations"') || line.includes("INSERT INTO auth.schema_migrations")) {
+      skippedSchemaMigrationsCount++;
+      continue;
+    }
 
     if (line.includes('INSERT INTO "auth"."users"')) {
       const match = line.match(/INSERT INTO "auth"\."users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s+ON CONFLICT[^;]+)?;?$/i);
@@ -181,7 +198,7 @@ if (fs.existsSync(backupPath)) {
     }
   }
 
-  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts fixed. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
+  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts fixed, ${skippedSchemaMigrationsCount} schema_migrations skipped. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
 
   fullSql += `-- Parent Table Inserts\n` + parentInserts.join("\n") + "\n\n";
   fullSql += `-- Child Table Inserts\n` + childInserts.join("\n") + "\n";
