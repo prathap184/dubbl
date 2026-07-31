@@ -184,9 +184,9 @@ if (fs.existsSync(backupPath)) {
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
 
-      // IMPORTANT: _percentage check FIRST, before logistics/amount/total substring checks,
-      // to prevent "allocated_logistics_percentage" and similar from being typed as jsonb.
-      if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics"))) {
+      // IMPORTANT: _percentage and _amount checks FIRST, before logistics substring check,
+      // to prevent "allocated_logistics_percentage" / "allocated_logistics_amount" from being typed as jsonb.
+      if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics")) || (lowerCol.endsWith("_amount") && lowerCol !== "amounts")) {
         colType = "numeric";
       } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
@@ -212,7 +212,26 @@ if (fs.existsSync(backupPath)) {
   fullSql += `-- =============================================================================\n`;
   fullSql += `SET session_replication_role = 'replica';\n\n`;
 
-  const lines = backupSql.split("\n");
+  // Join multi-line SQL statements into single lines before processing.
+  // Some backup generators (e.g. pg_dump) split INSERT ... VALUES\n(...); across two lines.
+  // Our regex only handles single-line statements, so we join them first.
+  const rawLines = backupSql.split("\n");
+  const lines: string[] = [];
+  let pendingStatement = "";
+  for (const rawLine of rawLines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith("--")) {
+      if (!pendingStatement) lines.push(rawLine); // preserve blank/comment lines outside statements
+      continue;
+    }
+    pendingStatement = pendingStatement ? pendingStatement + " " + trimmed : trimmed;
+    if (trimmed.endsWith(";")) {
+      lines.push(pendingStatement);
+      pendingStatement = "";
+    }
+  }
+  if (pendingStatement) lines.push(pendingStatement); // flush any trailing unterminated statement
+
   const parentInserts: string[] = [];
   const childInserts: string[] = [];
 
