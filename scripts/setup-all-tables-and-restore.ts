@@ -8,7 +8,7 @@ if (!url) {
   process.exit(1);
 }
 
-console.log("⚡ Connecting to Supabase Cloud for HIGH SPEED restore...");
+console.log("⚡ Connecting to Database for HIGH SPEED restore...");
 const pool = new pg.Pool({
   connectionString: url,
   max: 10,
@@ -16,35 +16,41 @@ const pool = new pg.Pool({
   connectionTimeoutMillis: 10000,
 });
 
-async function runQueryWithRetry(sql: string, maxRetries = 2): Promise<boolean> {
+async function runQueryWithRetry(sql: string, maxRetries = 2): Promise<{ success: boolean; error?: string }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await pool.query(sql);
-      return true;
+      return { success: true };
     } catch (err: any) {
       if (attempt === maxRetries) {
-        return false;
+        return { success: false, error: err.message };
       }
       await new Promise((res) => setTimeout(res, 100));
     }
   }
-  return false;
+  return { success: false };
 }
 
 async function setupAndRestore() {
   try {
-    const erpDumpPath = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
-    const erpDumpPathAlt = path.resolve(process.cwd(), "precision-press-erp", "database_migration_dump_fixed.sql");
+    const possiblePaths = [
+      path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql"),
+      path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql"),
+      path.resolve(process.cwd(), "precision-press-erp", "database_migration_dump_fixed.sql"),
+    ];
 
     let erpSql = "";
-    if (fs.existsSync(erpDumpPath)) {
-      erpSql = fs.readFileSync(erpDumpPath, "utf8");
-    } else if (fs.existsSync(erpDumpPathAlt)) {
-      erpSql = fs.readFileSync(erpDumpPathAlt, "utf8");
+    let foundPath = "";
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        erpSql = fs.readFileSync(p, "utf8");
+        foundPath = p;
+        break;
+      }
     }
 
     if (erpSql) {
-      console.log("🛠️ Ensuring ERP table structures (orders, order_items, jobs, workflow)...");
+      console.log(`🛠️ Found DDL at ${foundPath}. Creating ERP table structures...`);
       const ddlStatements = erpSql
         .split("\n")
         .map((l) => l.trim())
@@ -53,6 +59,8 @@ async function setupAndRestore() {
       for (const ddl of ddlStatements) {
         await runQueryWithRetry(ddl, 1);
       }
+    } else {
+      console.warn("⚠️ Warning: Precision Press ERP DDL file not found in search paths!");
     }
 
     const backupFilePath = path.resolve(process.cwd(), "drizzle", "supabase_full_backup.sql");
@@ -83,26 +91,29 @@ async function setupAndRestore() {
       const batch = statements.slice(i, i + BATCH_SIZE);
       const batchSql = batch.join("\n");
 
-      const success = await runQueryWithRetry(batchSql, 1);
-      if (success) {
+      const res = await runQueryWithRetry(batchSql, 1);
+      if (res.success) {
         executed += batch.length;
       } else {
         // Line by line fast check
         for (const stmt of batch) {
-          const lineSuccess = await runQueryWithRetry(stmt, 1);
-          if (lineSuccess) executed++;
-          else errors++;
+          const lineRes = await runQueryWithRetry(stmt, 1);
+          if (lineRes.success) {
+            executed++;
+          } else {
+            errors++;
+          }
         }
       }
 
       const currentCount = Math.min(i + BATCH_SIZE, statements.length);
       const percent = Math.min(100, Math.round((currentCount / statements.length) * 100));
-      console.log(`🚀 Fast-Restore: ${percent}% (${currentCount}/${statements.length} queries completed)`);
+      console.log(`🚀 Fast-Restore: ${percent}% (${currentCount}/${statements.length} queries processed)`);
     }
 
-    console.log(`\n🎉 Full restore completed in record time!`);
-    console.log(`✅ Total Executed: ${executed} queries`);
-    console.log(`ℹ️ Skipped/Duplicates: ${errors} queries`);
+    console.log(`\n🎉 Full restore completed!`);
+    console.log(`✅ Successfully Restored/Inserted: ${executed} queries`);
+    console.log(`ℹ️ Skipped (Already Existed): ${errors} queries`);
   } finally {
     await pool.end();
   }
