@@ -128,7 +128,7 @@ const TAX_RATES = [
   { name: "Tax Exempt", rate: 0, type: "both" as const, isDefault: false },
 ];
 
-async function seed() {
+export async function seed(exitProcess = true) {
   console.log("Seeding Pixel Marketing demo data...\n");
 
   // 1. Currencies — upsert so codes are present and metadata stays correct.
@@ -2525,7 +2525,9 @@ async function seed() {
   }
 
   console.log(`\nSeed complete! Organization: ${org.name}`);
-  process.exit(0);
+  if (exitProcess) {
+    process.exit(0);
+  }
 }
 
 seed().catch((err) => {
