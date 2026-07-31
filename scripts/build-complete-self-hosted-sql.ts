@@ -1,12 +1,74 @@
 import fs from "node:fs";
 import path from "node:path";
 
-console.log("🛠️ Rebuilding master initialization SQL script with correct PostgreSQL OVERRIDING SYSTEM VALUE placement & column type priorities...");
+console.log("🛠️ Rebuilding master initialization SQL script with auth generated column stripping & amounts/totals JSONB fixes...");
 
 const drizzleDir = path.resolve(process.cwd(), "drizzle");
 const erpDumpPath1 = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
 const erpDumpPath2 = path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql");
 const backupPath = path.join(drizzleDir, "supabase_full_backup.sql");
+
+function stripGeneratedColumnsFromAuthUsers(sqlLine: string): string {
+  const match = sqlLine.match(/^INSERT INTO\s+(?:"auth"\.)?"users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s*ON CONFLICT.*)?;?$/i);
+  if (!match) return sqlLine;
+
+  const colsRaw = match[1];
+  const valsRaw = match[2];
+  const onConflictStr = match[3] || "";
+
+  const cols = colsRaw.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+  
+  const vals: string[] = [];
+  let currentVal = "";
+  let inString = false;
+  let quoteChar = "";
+
+  for (let i = 0; i < valsRaw.length; i++) {
+    const ch = valsRaw[i];
+    if (inString) {
+      currentVal += ch;
+      if (ch === quoteChar) {
+        if (i + 1 < valsRaw.length && valsRaw[i + 1] === quoteChar) {
+          currentVal += valsRaw[i + 1];
+          i++;
+        } else {
+          inString = false;
+        }
+      }
+    } else {
+      if (ch === "'" || ch === '"') {
+        inString = true;
+        quoteChar = ch;
+        currentVal += ch;
+      } else if (ch === ",") {
+        vals.push(currentVal.trim());
+        currentVal = "";
+      } else {
+        currentVal += ch;
+      }
+    }
+  }
+  if (currentVal.trim()) {
+    vals.push(currentVal.trim());
+  }
+
+  if (cols.length !== vals.length) {
+    return sqlLine;
+  }
+
+  const generatedCols = new Set(["confirmed_at", "email"]);
+  const newCols: string[] = [];
+  const newVals: string[] = [];
+
+  for (let i = 0; i < cols.length; i++) {
+    if (!generatedCols.has(cols[i])) {
+      newCols.push(`"${cols[i]}"`);
+      newVals.push(vals[i]);
+    }
+  }
+
+  return `INSERT INTO "auth"."users" (${newCols.join(", ")}) OVERRIDING SYSTEM VALUE VALUES (${newVals.join(", ")})${onConflictStr};`;
+}
 
 let fullSql = `-- =============================================================================
 -- Master Self-Hosted Supabase Full Database Initialization Script
@@ -114,10 +176,10 @@ if (fs.existsSync(backupPath)) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
+      } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+        colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
-      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
-        colType = "jsonb";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
     }
@@ -171,7 +233,7 @@ if (fs.existsSync(backupPath)) {
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
-      line = line.replace(/\)\s*VALUES/i, ') OVERRIDING SYSTEM VALUE VALUES');
+      line = stripGeneratedColumnsFromAuthUsers(line);
       fixedAuthUsersCount++;
     }
 
@@ -192,7 +254,7 @@ if (fs.existsSync(backupPath)) {
     }
   }
 
-  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts updated with OVERRIDING SYSTEM VALUE, ${skippedSchemaMigrationsCount} schema_migrations skipped. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
+  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts stripped of generated columns, ${skippedSchemaMigrationsCount} schema_migrations skipped. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
 
   fullSql += `-- Parent Table Inserts\n` + parentInserts.join("\n") + "\n\n";
   fullSql += `-- Child Table Inserts\n` + childInserts.join("\n") + "\n";
