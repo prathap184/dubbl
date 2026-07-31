@@ -202,7 +202,7 @@ if (fs.existsSync(backupPath)) {
       // to prevent "allocated_logistics_percentage" / "allocated_logistics_amount" from being typed as jsonb.
       if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics")) || (lowerCol.endsWith("_amount") && lowerCol !== "amounts")) {
         colType = "numeric";
-      } else if ((lowerCol.includes("amount") && lowerCol !== "amounts" && !lowerCol.includes("words")) || (lowerCol.includes("total") && lowerCol !== "totals") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
+      } else if ((lowerCol.includes("amount") && lowerCol !== "amounts" && !lowerCol.includes("words")) || (lowerCol.includes("total") && lowerCol !== "totals") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol.includes("taxable_value_snapshot") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         // numeric fields take priority over snapshot/jsonb check so taxable_value_snapshot, grand_total_snapshot resolve as numeric
         colType = "numeric";
       } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
@@ -292,6 +292,9 @@ if (fs.existsSync(backupPath)) {
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
       line = stripAuthUsersGeneratedColumns(line);
       fixedAuthUsersCount++;
+    }
+    if (line.includes('INSERT INTO "auth"."identities"') || line.includes('INSERT INTO auth.identities')) {
+      line = stripGeneratedColumns(line, "auth", "identities", new Set(["email"]));
     }
     // NOTE: public.users.email is a regular NOT NULL column, NOT a generated column.
     // Do NOT strip it — stripping causes null-constraint violations.
