@@ -4,15 +4,15 @@ import path from "node:path";
 console.log("🛠️ Bundling complete Self-Hosted SQL initializer...");
 
 const drizzleDir = path.resolve(process.cwd(), "drizzle");
-const erpDumpPath = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
-const erpDumpPathAlt = path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql");
+const erpDumpPath1 = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
+const erpDumpPath2 = path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql");
 
-let fullSql = `
--- =============================================================================
+let fullSql = `-- =============================================================================
 -- Complete Self-Hosted Supabase Full Database Initialization Script
 -- =============================================================================
 
-CREATE SCHEMA IF NOT EXISTS "public";
+DROP SCHEMA IF EXISTS "public" CASCADE;
+CREATE SCHEMA "public";
 GRANT ALL ON SCHEMA "public" TO postgres;
 GRANT ALL ON SCHEMA "public" TO public;
 
@@ -33,30 +33,31 @@ const migrationFiles = [
 for (const file of migrationFiles) {
   const p = path.join(drizzleDir, file);
   if (fs.existsSync(p)) {
+    console.log(`Adding Drizzle migration: ${file}`);
     fullSql += `\n-- Migration: ${file}\n` + fs.readFileSync(p, "utf8") + "\n";
   }
 }
 
-// Step 2: Append ERP DDL Statements
+// Step 2: Append ERP DDL & Initial Tables
 let erpPath = "";
-if (fs.existsSync(erpDumpPath)) erpPath = erpDumpPath;
-else if (fs.existsSync(erpDumpPathAlt)) erpPath = erpDumpPathAlt;
+if (fs.existsSync(erpDumpPath1)) erpPath = erpDumpPath1;
+else if (fs.existsSync(erpDumpPath2)) erpPath = erpDumpPath2;
 
 if (erpPath) {
+  console.log(`Adding ERP DDL from: ${erpPath}`);
   const erpSql = fs.readFileSync(erpPath, "utf8");
-  const ddlStatements = erpSql
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("CREATE TABLE") || l.startsWith("CREATE SEQUENCE") || l.startsWith("CREATE OR REPLACE FUNCTION"));
-  fullSql += `\n-- Precision Press ERP DDL\n` + ddlStatements.join("\n") + "\n";
+  fullSql += `\n-- Precision Press ERP DDL\n` + erpSql + "\n";
+} else {
+  console.warn("⚠️ Warning: database_migration_dump_fixed.sql not found for ERP DDL!");
 }
 
 // Step 3: Append supabase_full_backup.sql Data
 const backupFile = path.join(drizzleDir, "supabase_full_backup.sql");
 if (fs.existsSync(backupFile)) {
+  console.log(`Adding Backup Data from: ${backupFile}`);
   fullSql += `\n-- Backup Data Insert Statements\n` + fs.readFileSync(backupFile, "utf8") + "\n";
 }
 
 const outputPath = path.join(drizzleDir, "self_hosted_full_init.sql");
 fs.writeFileSync(outputPath, fullSql, "utf8");
-console.log(`✅ Generated single bundle: ${outputPath} (${(fs.statSync(outputPath).size / 1024 / 1024).toFixed(2)} MB)`);
+console.log(`✅ Successfully generated clean bundle: ${outputPath} (${(fs.statSync(outputPath).size / 1024 / 1024).toFixed(2)} MB)`);
