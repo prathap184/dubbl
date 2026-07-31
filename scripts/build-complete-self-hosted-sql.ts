@@ -72,17 +72,14 @@ function stripGeneratedColumns(sqlLine: string, schema: string, tableName: strin
   }
 
   const qualifiedTable = schema ? `"${schema}"."${tableName}"` : `"${tableName}"`;
-  return `INSERT INTO ${qualifiedTable} (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${onConflictStr} ON CONFLICT DO NOTHING;`;
+  // Only append ON CONFLICT DO NOTHING if the original didn't already have one
+  const conflictClause = onConflictStr.trim() ? onConflictStr : " ON CONFLICT DO NOTHING";
+  return `INSERT INTO ${qualifiedTable} (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${conflictClause};`;
 }
 
 function stripAuthUsersGeneratedColumns(sqlLine: string): string {
-  // auth.users: confirmed_at and email are generated
+  // auth.users: confirmed_at and email are GENERATED columns in Supabase self-hosted
   return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at", "email"]));
-}
-
-function stripPublicUsersGeneratedColumns(sqlLine: string): string {
-  // public.users: email is a generated column in Supabase self-hosted
-  return stripGeneratedColumns(sqlLine, "public", "users", new Set(["email"]));
 }
 
 let fullSql = `-- =============================================================================
@@ -187,15 +184,17 @@ if (fs.existsSync(backupPath)) {
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
 
-      // IMPORTANT: JSONB check must come BEFORE the broad numeric check.
-      // Columns like "amounts" and "totals" store JSON objects (not plain numbers).
-      if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+      // IMPORTANT: _percentage check FIRST, before logistics/amount/total substring checks,
+      // to prevent "allocated_logistics_percentage" and similar from being typed as jsonb.
+      if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics"))) {
+        colType = "numeric";
+      } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
       } else if (lowerCol === "workflow" || lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.endsWith("_percentage") || lowerCol.endsWith("percentage") || lowerCol.includes("percent") || lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
+      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
@@ -246,16 +245,22 @@ if (fs.existsSync(backupPath)) {
       continue;
     }
 
+    // Skip orphaned "ON CONFLICT ..." lines — these are continuation lines from multi-line
+    // INSERT statements in the backup (e.g. INSERT INTO ...\nON CONFLICT DO NOTHING;).
+    // After we strip line 1 and append our own ON CONFLICT, line 2 becomes invalid SQL.
+    if (/^\s*ON CONFLICT/i.test(line)) {
+      continue;
+    }
+
     // Replace any Firebase serverTimestamp JSON tokens with NOW()
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
       line = stripAuthUsersGeneratedColumns(line);
       fixedAuthUsersCount++;
-    } else if (line.includes('INSERT INTO "public"."users"') || line.match(/INSERT INTO "users"/)) {
-      // public.users.email is also a generated column in Supabase self-hosted
-      line = stripPublicUsersGeneratedColumns(line);
     }
+    // NOTE: public.users.email is a regular NOT NULL column, NOT a generated column.
+    // Do NOT strip it — stripping causes null-constraint violations.
 
     // Determine target table for ordering
     const matchInsert = line.match(/INSERT INTO\s+(?:"?([a-zA-Z0-9_]+)"?\.)?"?([a-zA-Z0-9_]+)"?/i);
