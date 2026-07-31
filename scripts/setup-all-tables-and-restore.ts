@@ -2,13 +2,15 @@ import pg from "pg";
 import fs from "node:fs";
 import path from "node:path";
 
-const url = process.env.DATABASE_URL;
+// Allow TARGET_DATABASE_URL or OVERRIDE_DB_URL to explicitly override .env values
+const url = process.env.TARGET_DATABASE_URL || process.env.OVERRIDE_DB_URL || process.env.DATABASE_URL;
 if (!url) {
   console.error("❌ DATABASE_URL is missing in environment variables!");
   process.exit(1);
 }
 
-console.log("⚡ Connecting to Database for HIGH SPEED restore & verification...");
+// Strip pooler tenant error params if connecting to local
+console.log(`⚡ Connecting to Database: ${url.replace(/:[^:@]+@/, ":****@")}...`);
 const pool = new pg.Pool({
   connectionString: url,
   max: 10,
@@ -106,11 +108,10 @@ async function setupAndRestore() {
 
     console.log(`\n🎉 Restore & Verification Summary:`);
     console.log(`✅ Queries Executed: ${executed}`);
-    console.log(`ℹ️ Queries Skipped (Data Already Exists in Database): ${errors}`);
+    console.log(`ℹ️ Queries Skipped (Data Already Existed): ${errors}`);
 
-    // Print live table counts in self-hosted DB
     console.log("\n📊 CURRENT TABLE ROW COUNTS IN DATABASE:");
-    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs", "auth.users"];
+    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs"];
     for (const table of tablesToVerify) {
       try {
         const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
