@@ -267,9 +267,23 @@ export async function seed(exitProcess = true) {
         type: acct.type,
         subType: acct.subType,
       })
+      .onConflictDoNothing()
       .returning();
-    accountMap.set(acct.code, row.id);
-    newAccountCount++;
+
+    if (row) {
+      accountMap.set(acct.code, row.id);
+      newAccountCount++;
+    } else {
+      const existing = await db.query.chartAccount.findFirst({
+        where: and(
+          eq(chartAccount.organizationId, org.id),
+          eq(chartAccount.code, acct.code)
+        ),
+      });
+      if (existing) {
+        accountMap.set(acct.code, existing.id);
+      }
+    }
   }
   console.log(`  ${newAccountCount} new accounts (${accountMap.size} total)`);
 
