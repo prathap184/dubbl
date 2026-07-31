@@ -24,8 +24,6 @@ GRANT ALL ON SCHEMA "public" TO public;
 CREATE SCHEMA IF NOT EXISTS "auth";
 GRANT ALL ON SCHEMA "auth" TO postgres;
 GRANT ALL ON SCHEMA "auth" TO public;
-GRANT ALL ON ALL TABLES IN SCHEMA "auth" TO postgres;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA "auth" TO postgres;
 
 `;
 
@@ -49,7 +47,7 @@ for (const file of migrationFiles) {
   }
 }
 
-// Step 2: Append ERP DDL Statements (with jsonb timestamp fix)
+// Step 2: Append ERP DDL Statements (with jsonb timestamp & serverTimestamp fix)
 let erpPath = "";
 if (fs.existsSync(erpDumpPath1)) erpPath = erpDumpPath1;
 else if (fs.existsSync(erpDumpPath2)) erpPath = erpDumpPath2;
@@ -63,7 +61,8 @@ if (erpPath) {
     .replace(/"createdAt"\s+"jsonb"/gi, '"createdAt" timestamp with time zone')
     .replace(/"updatedAt"\s+"jsonb"/gi, '"updatedAt" timestamp with time zone')
     .replace(/"changedAt"\s+"jsonb"/gi, '"changedAt" timestamp with time zone')
-    .replace(/"changedat"\s+"jsonb"/gi, '"changedat" timestamp with time zone');
+    .replace(/"changedat"\s+"jsonb"/gi, '"changedat" timestamp with time zone')
+    .replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()');
 
   fullSql += `\n-- Precision Press ERP DDL\n` + erpSql + "\n";
 }
@@ -94,12 +93,15 @@ if (fs.existsSync(backupPath)) {
     }
   }
 
-  console.log(`Generating Fallback DDL for ${tableMap.size} backup tables...`);
+  console.log(`Generating Fallback DDL for backup tables...`);
   fullSql += `\n-- =============================================================================\n`;
   fullSql += `-- Auto-Generated Fallback DDL & Missing Column Patching\n`;
   fullSql += `-- =============================================================================\n`;
 
   for (const [key, spec] of tableMap.entries()) {
+    // Skip auth schema DDL generation (managed by Supabase auth container)
+    if (spec.schema === "auth") continue;
+
     const fullTableName = `"${spec.schema}"."${spec.table}"`;
     fullSql += `CREATE TABLE IF NOT EXISTS ${fullTableName} ("id" text);\n`;
     for (const col of spec.columns) {
@@ -110,12 +112,16 @@ if (fs.existsSync(backupPath)) {
         colType = "timestamp with time zone";
       } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics")) {
         colType = "jsonb";
-      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("count") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit")) {
+      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
     }
   }
+
+  // Relax constraints for tables with null values in NOT NULL columns
+  fullSql += `ALTER TABLE "public"."document_jobs" ALTER COLUMN "attempts" DROP NOT NULL;\n`;
+  fullSql += `ALTER TABLE "public"."document_jobs" ALTER COLUMN "maxattempts" DROP NOT NULL;\n`;
 
   // Step 4: Transform Backup Inserts
   console.log("Transforming backup data insert statements...");
