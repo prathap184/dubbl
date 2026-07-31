@@ -138,5 +138,5 @@ async function setupAndRestore() {
 
 setupAndRestore().catch((err) => {
   console.error("❌ Restore script error:", err);
-  pool.end().then(() => process.exit(1));
+  process.exit(1);
 });
