@@ -62,7 +62,8 @@ if (erpPath) {
     .replace(/"updatedAt"\s+"jsonb"/gi, '"updatedAt" timestamp with time zone')
     .replace(/"changedAt"\s+"jsonb"/gi, '"changedAt" timestamp with time zone')
     .replace(/"changedat"\s+"jsonb"/gi, '"changedat" timestamp with time zone')
-    .replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()');
+    .replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()')
+    .replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
   fullSql += `\n-- Precision Press ERP DDL\n` + erpSql + "\n";
 }
@@ -108,9 +109,11 @@ if (fs.existsSync(backupPath)) {
       let colType = "text";
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
-      if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
+      if (lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
+        colType = "text";
+      } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics")) {
+      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
@@ -121,7 +124,7 @@ if (fs.existsSync(backupPath)) {
 
   // Relax constraints for tables with null values in NOT NULL columns
   fullSql += `ALTER TABLE "public"."document_jobs" ALTER COLUMN "attempts" DROP NOT NULL;\n`;
-  fullSql += `ALTER TABLE "public"."document_jobs" ALTER COLUMN "maxattempts" DROP NOT NULL;\n`;
+  fullSql += `ALTER TABLE "public"."document_jobs" ALTER COLUMN "maxAttempts" DROP NOT NULL;\n`;
 
   // Step 4: Transform Backup Inserts
   console.log("Transforming backup data insert statements...");
@@ -163,6 +166,9 @@ if (fs.existsSync(backupPath)) {
       continue;
     }
 
+    // Replace any Firebase serverTimestamp JSON tokens with NOW()
+    line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
+
     if (line.includes('INSERT INTO "auth"."users"')) {
       const match = line.match(/INSERT INTO "auth"\."users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s+ON CONFLICT[^;]+)?;?$/i);
       if (match) {
@@ -171,19 +177,24 @@ if (fs.existsSync(backupPath)) {
         const onConflictStr = match[3] || "";
 
         const cols = rawColsStr.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-        const confirmedIdx = cols.indexOf("confirmed_at");
-        if (confirmedIdx !== -1) {
-          cols.splice(confirmedIdx, 1);
-          const newColsStr = cols.map(c => `"${c}"`).join(", ");
+        const valTokens = parseSqlValuesTuple(rawValuesStr);
 
-          const valTokens = parseSqlValuesTuple(rawValuesStr);
-          if (valTokens.length === cols.length + 1) {
-            valTokens.splice(confirmedIdx, 1);
-            const newValuesStr = valTokens.join(", ");
-            line = `INSERT INTO "auth"."users" (${newColsStr}) VALUES (${newValuesStr})${onConflictStr};`;
-            fixedAuthUsersCount++;
+        // Remove generated columns 'confirmed_at' and 'email' if present
+        const colsToRemove = ["confirmed_at", "email"];
+        for (const genCol of colsToRemove) {
+          const idx = cols.indexOf(genCol);
+          if (idx !== -1) {
+            cols.splice(idx, 1);
+            if (valTokens.length > cols.length) {
+              valTokens.splice(idx, 1);
+            }
           }
         }
+
+        const newColsStr = cols.map(c => `"${c}"`).join(", ");
+        const newValuesStr = valTokens.join(", ");
+        line = `INSERT INTO "auth"."users" (${newColsStr}) VALUES (${newValuesStr})${onConflictStr};`;
+        fixedAuthUsersCount++;
       }
     }
 
