@@ -84,7 +84,7 @@ import {
   revenueSchedule,
   revenueEntry,
 } from "./schema";
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { DEFAULT_ACCOUNTS } from "./default-accounts";
 import { getIsoCurrencies } from "../currency/iso4217";
