@@ -9,77 +9,91 @@ const erpDumpPath2 = path.resolve(process.cwd(), "..", "hindustan-erp", "precisi
 const backupPath = path.join(drizzleDir, "supabase_full_backup.sql");
 
 function stripGeneratedColumns(sqlLine: string, schema: string, tableName: string, generatedCols: Set<string>): string {
-  // Match INSERT INTO [schema.]"table" (cols) VALUES (vals) [ON CONFLICT ...];
-  const tablePattern = schema
-    ? new RegExp(`^INSERT INTO\\s+(?:"?${schema}"?\\.)?"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*\\((.+)\\)(\\s*ON CONFLICT.*)?;?$`, "i")
-    : new RegExp(`^INSERT INTO\\s+"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*\\((.+)\\)(\\s*ON CONFLICT.*)?;?$`, "i");
+  // Match INSERT INTO [schema.]"table" (cols) VALUES ... handling multi-row VALUES
+  const headerPattern = schema
+    ? new RegExp(`^INSERT INTO\\s+(?:"?${schema}"?\\.)?"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*(.+?)(\\s*ON CONFLICT[^;]*)?;\\s*$`, "is")
+    : new RegExp(`^INSERT INTO\\s+"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*(.+?)(\\s*ON CONFLICT[^;]*)?;\\s*$`, "is");
 
-  const match = sqlLine.match(tablePattern);
+  const match = sqlLine.match(headerPattern);
   if (!match) return sqlLine;
 
   const colsRaw = match[1];
-  const valsRaw = match[2];
+  const valuesBlock = match[2];
   const onConflictStr = match[3] || "";
-
   const cols = colsRaw.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
 
-  const vals: string[] = [];
-  let currentVal = "";
-  let inString = false;
-  let quoteChar = "";
-
-  for (let i = 0; i < valsRaw.length; i++) {
-    const ch = valsRaw[i];
-    if (inString) {
-      currentVal += ch;
-      if (ch === quoteChar) {
-        if (i + 1 < valsRaw.length && valsRaw[i + 1] === quoteChar) {
-          currentVal += valsRaw[i + 1];
-          i++;
-        } else {
-          inString = false;
-        }
-      }
-    } else {
-      if (ch === "'" || ch === '"') {
-        inString = true;
-        quoteChar = ch;
-        currentVal += ch;
-      } else if (ch === ",") {
-        vals.push(currentVal.trim());
-        currentVal = "";
-      } else {
-        currentVal += ch;
-      }
-    }
-  }
-  if (currentVal.trim()) {
-    vals.push(currentVal.trim());
-  }
-
-  if (cols.length !== vals.length) {
-    return sqlLine;
-  }
-
-  const newCols: string[] = [];
-  const newVals: string[] = [];
-
+  // Determine which indices to keep
+  const keepIndices: number[] = [];
+  const keepColNames: string[] = [];
   for (let i = 0; i < cols.length; i++) {
     if (!generatedCols.has(cols[i])) {
-      newCols.push(`"${cols[i]}"`);
-      newVals.push(vals[i]);
+      keepIndices.push(i);
+      keepColNames.push(`"${cols[i]}"`);
     }
   }
+  if (keepIndices.length === cols.length) return sqlLine; // nothing to strip
+
+  // Parse a single row's inner content (inside the parens) into values array
+  function parseRowInner(inner: string): string[] {
+    const vals: string[] = [];
+    let cur = "";
+    let inStr = false;
+    let qc = "";
+    let depth = 0;
+    for (let i = 0; i < inner.length; i++) {
+      const ch = inner[i];
+      if (inStr) {
+        cur += ch;
+        if (ch === qc) {
+          if (i + 1 < inner.length && inner[i + 1] === qc) { cur += inner[++i]; }
+          else inStr = false;
+        }
+      } else if (ch === "'" || ch === '"') { inStr = true; qc = ch; cur += ch; }
+      else if (ch === "(") { depth++; cur += ch; }
+      else if (ch === ")") { if (depth > 0) { depth--; cur += ch; } }
+      else if (ch === "," && depth === 0) { vals.push(cur.trim()); cur = ""; }
+      else { cur += ch; }
+    }
+    if (cur.trim()) vals.push(cur.trim());
+    return vals;
+  }
+
+  // Extract all top-level (...) groups from valuesBlock
+  const rowInners: string[] = [];
+  let i = 0;
+  while (i < valuesBlock.length) {
+    if (valuesBlock[i] === "(") {
+      let depth = 0, start = i, inStr = false, qc = "";
+      for (; i < valuesBlock.length; i++) {
+        const ch = valuesBlock[i];
+        if (inStr) {
+          if (ch === qc) { if (i + 1 < valuesBlock.length && valuesBlock[i + 1] === qc) i++; else inStr = false; }
+        } else if (ch === "'" || ch === '"') { inStr = true; qc = ch; }
+        else if (ch === "(") depth++;
+        else if (ch === ")") { depth--; if (depth === 0) { rowInners.push(valuesBlock.slice(start + 1, i)); i++; break; } }
+      }
+    } else { i++; }
+  }
+
+  if (rowInners.length === 0) return sqlLine;
+
+  const filteredRows = rowInners.map(inner => {
+    const vals = parseRowInner(inner);
+    if (vals.length !== cols.length) return null;
+    return "(" + keepIndices.map(idx => vals[idx]).join(", ") + ")";
+  }).filter(Boolean);
+
+  if (filteredRows.length === 0) return sqlLine;
 
   const qualifiedTable = schema ? `"${schema}"."${tableName}"` : `"${tableName}"`;
-  // Only append ON CONFLICT DO NOTHING if the original didn't already have one
   const conflictClause = onConflictStr.trim() ? onConflictStr : " ON CONFLICT DO NOTHING";
-  return `INSERT INTO ${qualifiedTable} (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${conflictClause};`;
+  return `INSERT INTO ${qualifiedTable} (${keepColNames.join(", ")}) VALUES ${filteredRows.join(", ")}${conflictClause};`;
 }
 
 function stripAuthUsersGeneratedColumns(sqlLine: string): string {
-  // auth.users: confirmed_at and email are GENERATED columns in Supabase self-hosted
-  return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at", "email"]));
+  // email is NOT a generated column (confirmed via supabase_auth_admin DROP EXPRESSION test).
+  // Only strip "confirmed_at" which is restricted in self-hosted Supabase.
+  return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at"]));
 }
 
 let fullSql = `-- =============================================================================
@@ -188,14 +202,15 @@ if (fs.existsSync(backupPath)) {
       // to prevent "allocated_logistics_percentage" / "allocated_logistics_amount" from being typed as jsonb.
       if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics")) || (lowerCol.endsWith("_amount") && lowerCol !== "amounts")) {
         colType = "numeric";
+      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
+        // numeric fields take priority over snapshot/jsonb check so taxable_value_snapshot, grand_total_snapshot resolve as numeric
+        colType = "numeric";
       } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
       } else if (lowerCol === "workflow" || lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
-        colType = "numeric";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
     }
