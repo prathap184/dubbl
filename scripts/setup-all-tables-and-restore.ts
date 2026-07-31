@@ -7,11 +7,14 @@ async function createWorkingPool() {
 
   const candidateUrls = [
     envUrl,
-    "postgresql://postgres.default:postgres@127.0.0.1:5432/postgres",
-    "postgresql://postgres.default:Powerstar%40200319@127.0.0.1:5432/postgres",
-    "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
-    "postgresql://postgres:Powerstar%40200319@127.0.0.1:5432/postgres",
-    "postgresql://postgres:postgres@localhost:5432/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+    "postgresql://postgres:Powerstar%40200319@127.0.0.1:54322/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:6543/postgres",
+    "postgresql://postgres:Powerstar%40200319@127.0.0.1:6543/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:54321/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:5433/postgres",
+    "postgresql://postgres:postgres@127.0.0.1:5432/postgres?options=-c%20search_path%3Dpublic",
+    "postgresql://postgres:Powerstar%40200319@127.0.0.1:5432/postgres?options=-c%20search_path%3Dpublic",
   ].filter(Boolean) as string[];
 
   for (const connectionString of candidateUrls) {
@@ -36,7 +39,7 @@ async function createWorkingPool() {
     }
   }
 
-  throw new Error("Unable to connect to any self-hosted database candidate URLs!");
+  throw new Error("Unable to connect to self-hosted database on ports 54322, 6543, 5432, or 5433!");
 }
 
 async function runQueryWithRetry(pool: pg.Pool, sql: string, maxRetries = 2): Promise<{ success: boolean; error?: string }> {
