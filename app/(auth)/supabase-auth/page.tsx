@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
@@ -13,7 +13,7 @@ import { signIn } from "next-auth/react";
 // 3. Call NextAuth signIn("credentials", { email, ssoToken }) — skips password
 // 4. Redirect to /dashboard
 
-export default function SupabaseAuthPage() {
+function SupabaseAuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "error">("loading");
@@ -101,5 +101,19 @@ export default function SupabaseAuthPage() {
         <p className="text-xs text-muted-foreground/60">Verifying your Pixel Marketing session</p>
       </div>
     </div>
+  );
+}
+
+export default function SupabaseAuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        </div>
+      }
+    >
+      <SupabaseAuthContent />
+    </Suspense>
   );
 }
