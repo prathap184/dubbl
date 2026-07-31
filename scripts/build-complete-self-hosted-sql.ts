@@ -8,8 +8,13 @@ const erpDumpPath1 = path.resolve(process.cwd(), "..", "Hindustan Enterprices", 
 const erpDumpPath2 = path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql");
 const backupPath = path.join(drizzleDir, "supabase_full_backup.sql");
 
-function stripGeneratedColumnsFromAuthUsers(sqlLine: string): string {
-  const match = sqlLine.match(/^INSERT INTO\s+(?:"auth"\.)?"users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s*ON CONFLICT.*)?;?$/i);
+function stripGeneratedColumns(sqlLine: string, schema: string, tableName: string, generatedCols: Set<string>): string {
+  // Match INSERT INTO [schema.]"table" (cols) VALUES (vals) [ON CONFLICT ...];
+  const tablePattern = schema
+    ? new RegExp(`^INSERT INTO\\s+(?:"?${schema}"?\\.)?"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*\\((.+)\\)(\\s*ON CONFLICT.*)?;?$`, "i")
+    : new RegExp(`^INSERT INTO\\s+"?${tableName}"?\\s*\\(([^)]+)\\)\\s*VALUES\\s*\\((.+)\\)(\\s*ON CONFLICT.*)?;?$`, "i");
+
+  const match = sqlLine.match(tablePattern);
   if (!match) return sqlLine;
 
   const colsRaw = match[1];
@@ -17,7 +22,7 @@ function stripGeneratedColumnsFromAuthUsers(sqlLine: string): string {
   const onConflictStr = match[3] || "";
 
   const cols = colsRaw.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-  
+
   const vals: string[] = [];
   let currentVal = "";
   let inString = false;
@@ -56,7 +61,6 @@ function stripGeneratedColumnsFromAuthUsers(sqlLine: string): string {
     return sqlLine;
   }
 
-  const generatedCols = new Set(["confirmed_at", "email"]);
   const newCols: string[] = [];
   const newVals: string[] = [];
 
@@ -67,7 +71,18 @@ function stripGeneratedColumnsFromAuthUsers(sqlLine: string): string {
     }
   }
 
-  return `INSERT INTO "auth"."users" (${newCols.join(", ")}) OVERRIDING SYSTEM VALUE VALUES (${newVals.join(", ")})${onConflictStr};`;
+  const qualifiedTable = schema ? `"${schema}"."${tableName}"` : `"${tableName}"`;
+  return `INSERT INTO ${qualifiedTable} (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${onConflictStr} ON CONFLICT DO NOTHING;`;
+}
+
+function stripAuthUsersGeneratedColumns(sqlLine: string): string {
+  // auth.users: confirmed_at and email are generated
+  return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at", "email"]));
+}
+
+function stripPublicUsersGeneratedColumns(sqlLine: string): string {
+  // public.users: email is a generated column in Supabase self-hosted
+  return stripGeneratedColumns(sqlLine, "public", "users", new Set(["email"]));
 }
 
 let fullSql = `-- =============================================================================
@@ -172,14 +187,16 @@ if (fs.existsSync(backupPath)) {
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
 
-      if (lowerCol === "workflow" || lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
+      // IMPORTANT: JSONB check must come BEFORE the broad numeric check.
+      // Columns like "amounts" and "totals" store JSON objects (not plain numbers).
+      if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+        colType = "jsonb";
+      } else if (lowerCol === "workflow" || lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
       } else if (lowerCol.endsWith("_percentage") || lowerCol.endsWith("percentage") || lowerCol.includes("percent") || lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
-      } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
-        colType = "jsonb";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
     }
@@ -233,8 +250,11 @@ if (fs.existsSync(backupPath)) {
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
-      line = stripGeneratedColumnsFromAuthUsers(line);
+      line = stripAuthUsersGeneratedColumns(line);
       fixedAuthUsersCount++;
+    } else if (line.includes('INSERT INTO "public"."users"') || line.match(/INSERT INTO "users"/)) {
+      // public.users.email is also a generated column in Supabase self-hosted
+      line = stripPublicUsersGeneratedColumns(line);
     }
 
     // Determine target table for ordering
