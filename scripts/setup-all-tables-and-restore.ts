@@ -2,14 +2,12 @@ import pg from "pg";
 import fs from "node:fs";
 import path from "node:path";
 
-// Allow TARGET_DATABASE_URL or OVERRIDE_DB_URL to explicitly override .env values
 const url = process.env.TARGET_DATABASE_URL || process.env.OVERRIDE_DB_URL || process.env.DATABASE_URL;
 if (!url) {
   console.error("❌ DATABASE_URL is missing in environment variables!");
   process.exit(1);
 }
 
-// Strip pooler tenant error params if connecting to local
 console.log(`⚡ Connecting to Database: ${url.replace(/:[^:@]+@/, ":****@")}...`);
 const pool = new pg.Pool({
   connectionString: url,
@@ -35,6 +33,15 @@ async function runQueryWithRetry(sql: string, maxRetries = 2): Promise<{ success
 
 async function setupAndRestore() {
   try {
+    console.log("🧹 STEP 1: Wiping old tables/schema for a 100% clean refresh...");
+    await pool.query(`
+      DROP SCHEMA IF EXISTS public CASCADE;
+      CREATE SCHEMA public;
+      GRANT ALL ON SCHEMA public TO postgres;
+      GRANT ALL ON SCHEMA public TO public;
+    `);
+    console.log("✅ Schema wiped clean!");
+
     const possiblePaths = [
       path.resolve(process.cwd(), "..", "hindustan-erp", "precision-press-erp", "database_migration_dump_fixed.sql"),
       path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql"),
@@ -52,7 +59,7 @@ async function setupAndRestore() {
     }
 
     if (erpSql) {
-      console.log(`🛠️ Ensuring ERP table structures from ${foundPath}...`);
+      console.log(`🛠️ STEP 2: Creating fresh ERP & table structures from ${foundPath}...`);
       const ddlStatements = erpSql
         .split("\n")
         .map((l) => l.trim())
@@ -69,7 +76,7 @@ async function setupAndRestore() {
       process.exit(1);
     }
 
-    console.log(`📄 Reading backup file: ${backupFilePath}...`);
+    console.log(`📄 STEP 3: Reading backup file: ${backupFilePath}...`);
     const sqlContent = fs.readFileSync(backupFilePath, "utf8");
     const lines = sqlContent.split("\n");
     const statements: string[] = [];
@@ -81,7 +88,7 @@ async function setupAndRestore() {
       }
     }
 
-    console.log(`⚡ HIGH-SPEED restoring ${statements.length} INSERT statements...`);
+    console.log(`⚡ STEP 4: Restoring ALL ${statements.length} INSERT statements cleanly...`);
 
     const BATCH_SIZE = 50;
     let executed = 0;
@@ -104,14 +111,18 @@ async function setupAndRestore() {
           }
         }
       }
+
+      const currentCount = Math.min(i + BATCH_SIZE, statements.length);
+      const percent = Math.min(100, Math.round((currentCount / statements.length) * 100));
+      console.log(`🚀 Clean Restore Progress: ${percent}% (${currentCount}/${statements.length} queries processed)`);
     }
 
-    console.log(`\n🎉 Restore & Verification Summary:`);
-    console.log(`✅ Queries Executed: ${executed}`);
-    console.log(`ℹ️ Queries Skipped (Data Already Existed): ${errors}`);
+    console.log(`\n🎉 CLEAN RESTORE COMPLETED!`);
+    console.log(`✅ Successfully Inserted: ${executed} queries`);
+    if (errors > 0) console.log(`ℹ️ Skipped: ${errors} queries`);
 
-    console.log("\n📊 CURRENT TABLE ROW COUNTS IN DATABASE:");
-    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs"];
+    console.log("\n📊 VERIFIED TABLE ROW COUNTS IN FRESH DATABASE:");
+    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs", "auth.users"];
     for (const table of tablesToVerify) {
       try {
         const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
