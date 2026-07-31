@@ -113,7 +113,7 @@ if (fs.existsSync(backupPath)) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
@@ -169,32 +169,26 @@ if (fs.existsSync(backupPath)) {
     // Replace any Firebase serverTimestamp JSON tokens with NOW()
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
-    if (line.includes('INSERT INTO "auth"."users"')) {
-      const match = line.match(/INSERT INTO "auth"\."users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s+ON CONFLICT[^;]+)?;?$/i);
+    if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
+      const match = line.match(/INSERT INTO\s+(?:"auth"|auth)\."users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s+ON CONFLICT[^;]+)?;?$/i);
       if (match) {
-        const rawColsStr = match[1];
-        const rawValuesStr = match[2];
+        const rawCols = match[1].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+        const valTokens = parseSqlValuesTuple(match[2]);
         const onConflictStr = match[3] || "";
 
-        const cols = rawColsStr.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-        const valTokens = parseSqlValuesTuple(rawValuesStr);
-
-        // Remove generated columns 'confirmed_at' and 'email' if present
-        const colsToRemove = ["confirmed_at", "email"];
-        for (const genCol of colsToRemove) {
-          const idx = cols.indexOf(genCol);
-          if (idx !== -1) {
-            cols.splice(idx, 1);
-            if (valTokens.length > cols.length) {
-              valTokens.splice(idx, 1);
-            }
+        const indicesToRemove = new Set<number>();
+        rawCols.forEach((colName, idx) => {
+          if (colName === "confirmed_at" || colName === "email") {
+            indicesToRemove.add(idx);
           }
-        }
+        });
 
-        const newColsStr = cols.map(c => `"${c}"`).join(", ");
-        const newValuesStr = valTokens.join(", ");
-        line = `INSERT INTO "auth"."users" (${newColsStr}) VALUES (${newValuesStr})${onConflictStr};`;
-        fixedAuthUsersCount++;
+        if (indicesToRemove.size > 0 && valTokens.length === rawCols.length) {
+          const newCols = rawCols.filter((_, idx) => !indicesToRemove.has(idx)).map(c => `"${c}"`);
+          const newVals = valTokens.filter((_, idx) => !indicesToRemove.has(idx));
+          line = `INSERT INTO "auth"."users" (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${onConflictStr};`;
+          fixedAuthUsersCount++;
+        }
       }
     }
 

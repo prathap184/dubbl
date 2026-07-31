@@ -4988,7 +4988,7 @@ ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "orderSource" text;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "createdBy" text;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "createdByRole" text;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "proxyExecutor" text;
-ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "amounts" numeric;
+ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "amounts" jsonb;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "delivery" text;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "productionNotes" text;
 ALTER TABLE "public"."orders" ADD COLUMN IF NOT EXISTS "thumbnailUrl" text;
