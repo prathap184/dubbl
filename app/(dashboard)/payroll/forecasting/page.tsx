@@ -145,7 +145,7 @@ export default function ForecastingPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Avg New Hire Salary</Label>
-              <CurrencyInput prefix="$" size="sm" value={avgHireSalary} onChange={setAvgHireSalary} />
+              <CurrencyInput size="sm" value={avgHireSalary} onChange={setAvgHireSalary} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Terminations</Label>

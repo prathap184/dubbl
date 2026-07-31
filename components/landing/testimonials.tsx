@@ -32,7 +32,7 @@ function APICodeCard() {
             <span className="text-white"> entries </span>
             <span className="text-white/40">=</span>
             <span className="text-emerald-400"> await</span>
-            <span className="text-white">{" dubbl.entries."}</span>
+            <span className="text-white">{" Pixel Marketing.entries."}</span>
             <span className="text-white">list</span>
             <span className="text-white/60">{"({"}</span>
           </p>
@@ -97,13 +97,13 @@ function DockerCard() {
             <span className="text-white/40">$</span> docker compose up -d
           </p>
           <p className="text-emerald-400">
-            {"  ✓ Container dubbl-db    Started"}
+            {"  ✓ Container Pixel Marketing-db    Started"}
           </p>
           <p className="text-emerald-400">
-            {"  ✓ Container dubbl-app   Started"}
+            {"  ✓ Container Pixel Marketing-app   Started"}
           </p>
           <p className="mt-2 text-white font-medium">
-            {"  dubbl running at localhost:3000"}
+            {"  Pixel Marketing running at localhost:3000"}
           </p>
         </motion.div>
       </div>
@@ -133,7 +133,7 @@ function SDKCard() {
           <p className="mt-3">
             <span className="text-emerald-400">import</span>
             <span className="text-white/60">{" { "}</span>
-            <span className="text-white">Dubbl</span>
+            <span className="text-white">Pixel Marketing</span>
             <span className="text-white/60">{" } "}</span>
             <span className="text-emerald-400">from</span>
             <span className="text-amber-400">{' "@dubbl/sdk"'}</span>
@@ -144,7 +144,7 @@ function SDKCard() {
             <span className="text-white"> client </span>
             <span className="text-white/40">=</span>
             <span className="text-emerald-400"> new</span>
-            <span className="text-white">{" Dubbl"}</span>
+            <span className="text-white">{" Pixel Marketing"}</span>
             <span className="text-white/60">{"();"}</span>
           </p>
         </motion.div>

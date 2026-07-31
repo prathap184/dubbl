@@ -29,5 +29,5 @@ export async function resolveDocumentCurrency(
     where: eq(organization.id, organizationId),
     columns: { defaultCurrency: true },
   });
-  return org?.defaultCurrency ?? "USD";
+  return org?.defaultCurrency ?? "INR";
 }

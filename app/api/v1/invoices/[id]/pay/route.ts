@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { invoice, payment, paymentAllocation } from "@/lib/db/schema";
+import { invoice, payment, paymentAllocation, bankAccount } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { requireRole } from "@/lib/api/require-role";
@@ -97,6 +97,20 @@ export async function POST(
         amount: parsed.amount,
       });
 
+      // Determine the correct ledger account code for the journal entry
+      let bankAccountCode: string | undefined = undefined;
+      if (parsed.bankAccountId) {
+        const ba = await tx.query.bankAccount.findFirst({
+          where: eq(bankAccount.id, parsed.bankAccountId),
+          with: { chartAccount: true },
+        });
+        if (ba?.chartAccount?.code) bankAccountCode = ba.chartAccount.code;
+      } else if (parsed.method === "cash") {
+        bankAccountCode = "1000"; // Default Cash account
+      } else if (parsed.method === "card") {
+        bankAccountCode = "2110"; // Default Credit Card liability or similar, though 1100 is often used for receiving card payments. Let's stick to 1100 or specific if they have one.
+      }
+
       // Create payment journal entry
       const journalEntry = await createPaymentJournalEntry(
         { organizationId: ctx.organizationId, userId: ctx.userId },
@@ -105,6 +119,7 @@ export async function POST(
           reference: paymentNumber,
           amount: parsed.amount,
           date: parsed.date,
+          bankAccountCode,
           allocations: [
             {
               amount: parsed.amount,

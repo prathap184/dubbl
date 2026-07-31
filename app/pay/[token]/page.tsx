@@ -161,7 +161,7 @@ function PaymentPageContent() {
   }
 
   const inv = data?.invoice as InvoiceData;
-  const currency = inv?.currencyCode || "USD";
+  const currency = inv?.currencyCode || "INR";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">

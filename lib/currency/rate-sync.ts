@@ -29,7 +29,7 @@ export async function processExchangeRateSync(): Promise<{
   // Group orgs by base currency so we derive each base only once.
   const orgsByBase = new Map<string, string[]>();
   for (const o of orgs) {
-    const base = (o.base || "USD").toUpperCase();
+    const base = (o.base || "INR").toUpperCase();
     if (!orgsByBase.has(base)) orgsByBase.set(base, []);
     orgsByBase.get(base)!.push(o.id);
   }

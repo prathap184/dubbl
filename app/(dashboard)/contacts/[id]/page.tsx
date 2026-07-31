@@ -228,7 +228,6 @@ export default function ContactDetailsPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Credit limit</Label>
                 <CurrencyInput
-                  prefix="$"
                   value={formCreditLimit}
                   onChange={setFormCreditLimit}
                   placeholder="No limit"

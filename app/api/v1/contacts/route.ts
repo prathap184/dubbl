@@ -21,7 +21,7 @@ const createSchema = z.object({
   paymentTermsDays: z.number().int().min(0).default(30),
   addresses: z.any().optional(),
   notes: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
 });
 
 export async function GET(request: Request) {

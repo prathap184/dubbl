@@ -412,7 +412,7 @@ export async function GET(
 
     // Serialize the contact ledger into the shared Statement shape and render a
     // PDF via the same @react-pdf path used by other report exports.
-    const currency = c.currencyCode || "USD";
+    const currency = c.currencyCode || "INR";
 
     const statement: Statement = {
       title: `Statement — ${c.name}`,

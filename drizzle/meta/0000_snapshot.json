@@ -20515,14 +20515,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "dubbl_entity_type": {
-          "name": "dubbl_entity_type",
+        "Pixel Marketing_entity_type": {
+          "name": "Pixel Marketing_entity_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "dubbl_entity_id": {
-          "name": "dubbl_entity_id",
+        "Pixel Marketing_entity_id": {
+          "name": "Pixel Marketing_entity_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true

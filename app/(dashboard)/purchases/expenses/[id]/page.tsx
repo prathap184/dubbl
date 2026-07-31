@@ -392,7 +392,7 @@ function EditExpenseDrawer({
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Amount *</Label>
-                        <CurrencyInput prefix="$" value={item.amount} onChange={(v) => updateEditItem(index, { amount: v })} />
+                        <CurrencyInput value={item.amount} onChange={(v) => updateEditItem(index, { amount: v })} />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Category</Label>

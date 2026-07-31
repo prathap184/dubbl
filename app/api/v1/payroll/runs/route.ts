@@ -124,7 +124,7 @@ export async function POST(request: Request) {
 
     const overtimeThreshold = settings?.overtimeThresholdHours ?? 40;
     const overtimeMultiplier = settings?.overtimeMultiplier ?? 1.5;
-    const defaultCurrency = settings?.defaultCurrency ?? "USD";
+    const defaultCurrency = settings?.defaultCurrency ?? "INR";
 
     // Pre-fetch exchange rates for employees with non-default currencies
     const fxRateCache = new Map<string, number>();

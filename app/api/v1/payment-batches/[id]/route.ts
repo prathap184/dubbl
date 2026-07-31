@@ -13,7 +13,7 @@ const addItemSchema = z.object({
   billId: z.string().min(1),
   contactId: z.string().min(1),
   amount: z.number().int().positive(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
 });
 
 const updateSchema = z.object({

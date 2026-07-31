@@ -29,7 +29,7 @@ const createSchema = z.object({
   deliveryDate: z.string().nullable().optional(),
   reference: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   lines: z.array(lineSchema).min(1),
 });
 

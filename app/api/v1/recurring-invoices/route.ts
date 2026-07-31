@@ -124,7 +124,7 @@ export async function POST(request: Request) {
         maxOccurrences: parsed.maxOccurrences || null,
         reference: parsed.reference || null,
         notes: parsed.notes || null,
-        currencyCode: parsed.currencyCode || "USD",
+        currencyCode: parsed.currencyCode || "INR",
         autoSend: parsed.autoSend,
         createAsApproved: parsed.createAsApproved,
         createdBy: ctx.userId,

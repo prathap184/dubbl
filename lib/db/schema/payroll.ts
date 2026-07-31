@@ -178,7 +178,7 @@ export const payrollSettings = pgTable("payroll_settings", {
   defaultTaxRate: integer("default_tax_rate").notNull().default(2000), // basis points
   overtimeThresholdHours: real("overtime_threshold_hours").notNull().default(40),
   overtimeMultiplier: real("overtime_multiplier").notNull().default(1.5),
-  defaultCurrency: text("default_currency").notNull().default("USD"),
+  defaultCurrency: text("default_currency").notNull().default("INR"),
   salaryExpenseAccountCode: text("salary_expense_account_code").default("5100"),
   taxPayableAccountCode: text("tax_payable_account_code").default("2200"),
   bankAccountCode: text("bank_account_code").default("1100"),
@@ -234,7 +234,7 @@ export const payrollEmployee = pgTable("payroll_employee", {
   terminationDate: date("termination_date"),
   terminationReason: text("termination_reason"),
   ptoBalanceHours: real("pto_balance_hours").notNull().default(0),
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   compensationBandId: uuid("compensation_band_id"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -287,7 +287,7 @@ export const payrollItem = pgTable("payroll_item", {
   preTaxDeductions: integer("pre_tax_deductions").default(0), // cents
   postTaxDeductions: integer("post_tax_deductions").default(0), // cents
   timesheetId: uuid("timesheet_id"),
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   fxRate: real("fx_rate").default(1),
   projectId: uuid("project_id").references(() => project.id, { onDelete: "set null" }),
   milestoneId: uuid("milestone_id").references(() => projectMilestone.id, { onDelete: "set null" }),
@@ -453,7 +453,7 @@ export const contractor = pgTable("contractor", {
   company: text("company"),
   taxId: text("tax_id"),
   hourlyRate: integer("hourly_rate"), // cents
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   bankAccountNumber: text("bank_account_number"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -467,7 +467,7 @@ export const contractorPayment = pgTable("contractor_payment", {
     .notNull()
     .references(() => contractor.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(), // cents
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   description: text("description"),
   invoiceNumber: text("invoice_number"),
   periodStart: date("period_start"),
@@ -542,7 +542,7 @@ export const compensationBand = pgTable("compensation_band", {
   minSalary: integer("min_salary").notNull(), // cents
   midSalary: integer("mid_salary").notNull(), // cents
   maxSalary: integer("max_salary").notNull(), // cents
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
@@ -675,7 +675,7 @@ export const payrollTaxPayment = pgTable("payroll_tax_payment", {
   // What this remittance covers, e.g. "941" (FIT+FICA), "940" (FUTA), "state_income".
   taxKind: text("tax_kind"),
   amount: integer("amount").notNull(), // cents remitted
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("INR"),
   bankAccountId: uuid("bank_account_id"), // chartAccount id paid from
   reference: text("reference"), // confirmation / EFTPS number
   notes: text("notes"),

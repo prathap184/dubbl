@@ -265,7 +265,7 @@ export default function LoansPage() {
                     <div className="size-7" />
                     <p className="text-sm font-semibold">Paid off over time</p>
                   </div>
-                  <span className="font-mono text-sm font-bold">$0.00</span>
+                  <span className="font-mono text-sm font-bold">{formatMoney(0)}</span>
                 </div>
               </div>
             </div>

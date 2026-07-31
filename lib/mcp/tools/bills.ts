@@ -97,7 +97,7 @@ export function registerBillTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
+        .default("INR")
         .describe("Currency code"),
       lines: z
         .array(

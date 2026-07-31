@@ -26,12 +26,17 @@ export async function GET(request: Request) {
     const seatCount = sub?.seatCount ?? 1;
 
     // Determine effective member cap:
+    // - Self-hosted mode: unlimited
     // - overrideMembers (enterprise override) takes priority
     // - Free: hard limit from plan (1)
     // - Pro: per-seat model, use seatCount from subscription
     // - Business: unlimited
+    const isSelfHosted = !process.env.STRIPE_SECRET_KEY;
     let max: number;
-    if (sub?.overrideMembers != null) {
+    
+    if (isSelfHosted) {
+      max = Infinity;
+    } else if (sub?.overrideMembers != null) {
       max = sub.overrideMembers;
     } else if (plan === "pro") {
       max = seatCount;

@@ -95,6 +95,10 @@ export const inventoryItem = pgTable(
     quantityOnHand: integer("quantity_on_hand").notNull().default(0),
     reorderPoint: integer("reorder_point").notNull().default(0),
     trackingMethod: trackingMethodEnum("tracking_method").notNull().default("none"),
+    hsnCode: text("hsn_code"),
+    gstRate: integer("gst_rate"),
+    workflowSteps: jsonb("workflow_steps").default([]),
+    metadata: jsonb("metadata").default({}),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
@@ -716,3 +720,20 @@ export const movementLotAssignmentRelations = relations(movementLotAssignment, (
     references: [lotBatch.id],
   }),
 }));
+
+
+// --- HSN Master ---
+
+export const hsnMaster = pgTable("hsn_master", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hsnCode: text("hsn_code").notNull(),
+  description: text("description").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+export const hsnGstRates = pgTable("hsn_gst_rates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hsnId: uuid("hsn_id").notNull().references(() => hsnMaster.id),
+  gstRate: integer("gst_rate").notNull(),
+  effectiveFrom: timestamp("effective_from"),
+});

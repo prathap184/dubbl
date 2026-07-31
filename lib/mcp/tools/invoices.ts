@@ -143,7 +143,7 @@ export function registerInvoiceTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
+        .default("INR")
         .describe("Currency code"),
       invoiceType: z
         .enum(["standard", "deposit", "retainer"])
@@ -218,7 +218,7 @@ export function registerInvoiceTools(server: McpServer, ctx: AuthContext) {
 
         await assertNotLocked(ctx.organizationId, params.issueDate);
         await checkMonthlyLimit(ctx.organizationId, invoice, invoice.organizationId, invoice.createdAt, "invoicesPerMonth", invoice.deletedAt);
-        await checkMultiCurrency(ctx.organizationId, params.currencyCode ?? "USD");
+        await checkMultiCurrency(ctx.organizationId, params.currencyCode ?? "INR");
 
         // Auto-calculate due date if not provided
         let dueDate = params.dueDate;

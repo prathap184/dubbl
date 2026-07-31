@@ -22,12 +22,12 @@ const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://dubbl.dev";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://pixelmarketing.dev";
 
 export const metadata: Metadata = {
   title: {
-    default: "dubbl · Open-Source Accounting, ERP & Business Management",
-    template: "%s · dubbl",
+    default: "Pixel Marketing · Open-Source Accounting, ERP & Business Management",
+    template: "%s · Pixel Marketing",
   },
   description:
     "Free, open-source double-entry accounting with invoicing, bills, payroll, inventory, projects, and CRM. Self-host or use our cloud. API-first, MCP-ready, Apache 2.0.",
@@ -49,14 +49,14 @@ export const metadata: Metadata = {
     "small business accounting",
     "free accounting software",
   ],
-  authors: [{ name: "dubbl", url: APP_URL }],
-  creator: "dubbl",
+  authors: [{ name: "Pixel Marketing", url: APP_URL }],
+  creator: "Pixel Marketing",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: APP_URL,
-    siteName: "dubbl",
-    title: "dubbl · Open-Source Accounting & Business Management",
+    siteName: "Pixel Marketing",
+    title: "Pixel Marketing · Open-Source Accounting & Business Management",
     description:
       "Free, open-source double-entry accounting with invoicing, bills, payroll, inventory, projects, and CRM. Self-host or use our cloud.",
     images: [
@@ -64,13 +64,13 @@ export const metadata: Metadata = {
         url: "/og.jpg",
         width: 1200,
         height: 630,
-        alt: "dubbl - Open-source accounting for modern teams",
+        alt: "Pixel Marketing - Open-source accounting for modern teams",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "dubbl · Open-Source Accounting & Business Management",
+    title: "Pixel Marketing · Open-Source Accounting & Business Management",
     description:
       "Free, open-source double-entry accounting with invoicing, bills, payroll, inventory, projects, and CRM. Self-host or use our cloud.",
     images: [
@@ -78,7 +78,7 @@ export const metadata: Metadata = {
         url: "/og.jpg",
         width: 1200,
         height: 630,
-        alt: "dubbl - Open-source accounting for modern teams",
+        alt: "Pixel Marketing - Open-source accounting for modern teams",
       },
     ],
   },
@@ -108,7 +108,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-title" content="Dubbl" />
+        <meta name="apple-mobile-web-app-title" content="Pixel Marketing" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} font-sans antialiased`}

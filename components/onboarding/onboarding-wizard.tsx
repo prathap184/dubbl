@@ -194,7 +194,7 @@ export function OnboardingWizard() {
           name: orgName,
           country: selectedCountry?.name ?? null,
           countryCode: countryCode || null,
-          defaultCurrency: selectedCountry?.defaultCurrency ?? "USD",
+          defaultCurrency: selectedCountry?.defaultCurrency ?? "INR",
           businessType: businessType || null,
           industrySector: industry || null,
           referralSource: finalReferral || null,
@@ -394,7 +394,7 @@ function StepOrgName({
         Name your organization
       </h2>
       <p className="mt-1.5 text-sm text-muted-foreground">
-        This is how your organization will appear across dubbl.
+        This is how your organization will appear across Pixel Marketing.
       </p>
       <div className="mt-6">
         <div className="space-y-2">

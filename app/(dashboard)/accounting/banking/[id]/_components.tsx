@@ -1046,7 +1046,6 @@ export function MatchToBillSheet({
                 </span>
               </div>
               <CurrencyInput
-                prefix="$"
                 value={payAmount}
                 onChange={setPayAmount}
               />
@@ -1202,7 +1201,7 @@ export function CreateExpenseSheet({
 
             <div className="space-y-1.5">
               <Label className="text-xs">Amount</Label>
-              <CurrencyInput prefix="$" value={itemAmount} onChange={setItemAmount} />
+              <CurrencyInput value={itemAmount} onChange={setItemAmount} />
             </div>
 
             <div className="space-y-1.5">
@@ -1842,7 +1841,7 @@ export function MatchToInvoiceSheet({
                   Invoice due: {formatMoney(selected.amountDue, currencyCode)}
                 </span>
               </div>
-              <CurrencyInput prefix="$" value={payAmount} onChange={setPayAmount} />
+              <CurrencyInput value={payAmount} onChange={setPayAmount} />
             </div>
           )}
         </div>
@@ -2110,7 +2109,7 @@ export function MatchSheet({
               {needsAmount && (
                 <div className="space-y-2 rounded-lg border p-3">
                   <Label className="text-xs">{isCredit ? "Amount Received" : "Payment Amount"}</Label>
-                  <CurrencyInput prefix="$" value={payAmount} onChange={setPayAmount} />
+                  <CurrencyInput value={payAmount} onChange={setPayAmount} />
                 </div>
               )}
             </>
@@ -2466,7 +2465,7 @@ export function SplitAccountSheet({
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Amount</Label>
-                    <CurrencyInput prefix="$" value={row.amount} onChange={(v) => updateRow(row.key, { amount: v })} />
+                    <CurrencyInput value={row.amount} onChange={(v) => updateRow(row.key, { amount: v })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tax</Label>

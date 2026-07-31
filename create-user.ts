@@ -1,0 +1,1 @@
+import { db } from './lib/db'; import { users } from './lib/db/schema'; async function main() { await db.insert(users).values({ id: '00000000-0000-0000-0000-000000000001', name: 'Demo User', email: 'demo@Pixel Marketing.dev', isSiteAdmin: true }); console.log('Done'); process.exit(0); } main();

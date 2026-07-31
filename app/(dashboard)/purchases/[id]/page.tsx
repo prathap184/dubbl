@@ -317,7 +317,7 @@ export default function BillDetailPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Amount</Label>
-                      <CurrencyInput prefix="$" value={payAmount} onChange={setPayAmount} placeholder={minorUnitsToDecimal(b.amountDue, b.currencyCode)} />
+                      <CurrencyInput value={payAmount} onChange={setPayAmount} placeholder={minorUnitsToDecimal(b.amountDue, b.currencyCode)} />
                     </div>
                     <div className="space-y-2">
                       <Label>Date</Label>

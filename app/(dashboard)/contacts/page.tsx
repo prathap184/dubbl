@@ -116,7 +116,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
       render: (r) => (
         <span className="text-sm tabular-nums text-muted-foreground">
           {r.creditLimit != null
-            ? formatMoney(r.creditLimit, r.currencyCode || "USD")
+            ? formatMoney(r.creditLimit, r.currencyCode || "INR")
             : "No limit"}
         </span>
       ),
@@ -129,7 +129,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
         <span className="text-sm tabular-nums">
           {r.owesYou && r.owesYou > 0 ? (
             <span className="font-medium text-emerald-600 dark:text-emerald-400">
-              {formatMoney(r.owesYou, r.currencyCode || "USD")}
+              {formatMoney(r.owesYou, r.currencyCode || "INR")}
             </span>
           ) : (
             <span className="text-muted-foreground">-</span>
@@ -145,7 +145,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
         <span className="text-sm tabular-nums">
           {r.youOwe && r.youOwe > 0 ? (
             <span className="font-medium text-orange-600 dark:text-orange-400">
-              {formatMoney(r.youOwe, r.currencyCode || "USD")}
+              {formatMoney(r.youOwe, r.currencyCode || "INR")}
             </span>
           ) : (
             <span className="text-muted-foreground">-</span>
@@ -161,7 +161,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
         <span className="text-sm tabular-nums">
           {r.overdue && r.overdue > 0 ? (
             <span className="font-semibold text-red-600 dark:text-red-400">
-              {formatMoney(r.overdue, r.currencyCode || "USD")}
+              {formatMoney(r.overdue, r.currencyCode || "INR")}
             </span>
           ) : (
             <span className="text-muted-foreground">-</span>

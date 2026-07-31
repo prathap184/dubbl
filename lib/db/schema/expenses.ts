@@ -29,7 +29,7 @@ export const expenseClaim = pgTable("expense_claim", {
   submittedBy: uuid("submitted_by").notNull().references(() => users.id),
   status: expenseStatusEnum("status").notNull().default("draft"),
   totalAmount: integer("total_amount").notNull().default(0),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   approvedBy: uuid("approved_by").references(() => users.id),
   journalEntryId: uuid("journal_entry_id").references(() => journalEntry.id),
   submittedAt: timestamp("submitted_at", { mode: "date" }),

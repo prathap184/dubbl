@@ -117,7 +117,7 @@ export async function processFxRevaluationForOrg(
     where: eq(organization.id, orgId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
 
   const openConditions = (table: typeof invoice | typeof bill) =>
     and(

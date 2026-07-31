@@ -172,7 +172,7 @@ export function registerPayrollTools(server: McpServer, ctx: AuthContext) {
       endDate: z.string().nullable().optional().describe("Employment end date (YYYY-MM-DD), if any"),
       bankAccountNumber: z.string().nullable().optional().describe("Employee bank account number for net pay"),
       memberId: z.string().uuid().nullable().optional().describe("Optional UUID of the linked org member"),
-      currency: z.string().optional().default("USD").describe("ISO currency code for this employee's pay (default USD)"),
+      currency: z.string().optional().default("INR").describe("ISO currency code for this employee's pay (default INR)"),
     },
     (params) =>
       wrapTool(ctx, async () => {
@@ -299,7 +299,7 @@ export function registerPayrollTools(server: McpServer, ctx: AuthContext) {
 
         const overtimeThreshold = settings?.overtimeThresholdHours ?? 40;
         const overtimeMultiplier = settings?.overtimeMultiplier ?? 1.5;
-        const defaultCurrency = settings?.defaultCurrency ?? "USD";
+        const defaultCurrency = settings?.defaultCurrency ?? "INR";
 
         // Pre-fetch FX rates for any non-default employee currencies.
         const fxRateCache = new Map<string, number>();
@@ -1014,7 +1014,7 @@ export function registerPayrollTools(server: McpServer, ctx: AuthContext) {
         const remittanceSettings = await db.query.payrollSettings.findFirst({
           where: eq(payrollSettings.organizationId, ctx.organizationId),
         });
-        const baseCurrency = remittanceSettings?.defaultCurrency ?? "USD";
+        const baseCurrency = remittanceSettings?.defaultCurrency ?? "INR";
         const liabilityAccount =
           (await findAccountByCode(ctx.organizationId, liabilityCode)) ??
           (await ensureAccountByCode(

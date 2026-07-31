@@ -16,7 +16,7 @@ const updateLineSchema = z.object({
   description: z.string().nullable().optional(),
   debitAmount: z.number().int().min(0).default(0),
   creditAmount: z.number().int().min(0).default(0),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   exchangeRate: z.number().int().default(1000000),
   costCenterId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),

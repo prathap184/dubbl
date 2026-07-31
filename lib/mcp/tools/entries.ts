@@ -182,7 +182,7 @@ export function registerEntryTools(server: McpServer, ctx: AuthContext) {
             currencyCode: z
               .string()
               .optional()
-              .default("USD")
+              .default("INR")
               .describe("Currency code"),
             exchangeRate: z
               .number()
@@ -253,7 +253,7 @@ export function registerEntryTools(server: McpServer, ctx: AuthContext) {
             description: l.description ?? null,
             debitAmount: l.debitAmount,
             creditAmount: l.creditAmount,
-            currencyCode: l.currencyCode ?? "USD",
+            currencyCode: l.currencyCode ?? "INR",
             exchangeRate: l.exchangeRate ?? 1000000,
           }))
         );
@@ -392,7 +392,7 @@ export function registerEntryTools(server: McpServer, ctx: AuthContext) {
             currencyCode: z
               .string()
               .optional()
-              .default("USD")
+              .default("INR")
               .describe("Currency code"),
             exchangeRate: z
               .number()
@@ -473,7 +473,7 @@ export function registerEntryTools(server: McpServer, ctx: AuthContext) {
               description: l.description ?? null,
               debitAmount: l.debitAmount,
               creditAmount: l.creditAmount,
-              currencyCode: l.currencyCode ?? "USD",
+              currencyCode: l.currencyCode ?? "INR",
               exchangeRate: l.exchangeRate ?? 1000000,
               costCenterId: l.costCenterId ?? null,
               projectId: l.projectId ?? null,

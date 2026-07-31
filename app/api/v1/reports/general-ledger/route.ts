@@ -217,7 +217,7 @@ export async function GET(request: Request) {
         where: eq(organization.id, ctx.organizationId),
         columns: { defaultCurrency: true },
       });
-      const currency = org?.defaultCurrency || "USD";
+      const currency = org?.defaultCurrency || "INR";
 
       // One section per account: its entries (debit positive, credit negative)
       // plus a running closing balance as the subtotal.

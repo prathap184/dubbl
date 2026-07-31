@@ -68,7 +68,7 @@ export const deal = pgTable("deal", {
   contactId: uuid("contact_id").references(() => contact.id),
   title: text("title").notNull(),
   valueCents: integer("value_cents").notNull().default(0),
-  currency: text("currency").notNull().default("USD"),
+  currency: text("currency").notNull().default("INR"),
   probability: integer("probability").default(0),
   expectedCloseDate: date("expected_close_date"),
   assignedTo: uuid("assigned_to").references(() => users.id),

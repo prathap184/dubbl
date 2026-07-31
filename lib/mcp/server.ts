@@ -4,7 +4,7 @@ import { registerAllTools } from "./tools";
 
 export function createMcpServer(ctx: AuthContext): McpServer {
   const server = new McpServer({
-    name: "dubbl",
+    name: "Pixel Marketing",
     version: "0.1.0",
   });
 

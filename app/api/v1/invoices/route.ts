@@ -32,8 +32,15 @@ const lineSchema = z.object({
   accountId: z.string().nullable().optional(),
   taxRateId: z.string().nullable().optional(),
   discountPercent: z.number().int().min(0).max(10000).default(0),
-  costCenterId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),
+  costCenterId: z.string().nullable().optional(),
+  // New proxy order fields
+  width: z.number().nullable().optional(),
+  length: z.number().nullable().optional(),
+  sqFt: z.number().nullable().optional(),
+  finishAmount: z.number().nullable().optional(),
+  deliveryMode: z.string().nullable().optional(),
+  deliveryAmount: z.number().nullable().optional(),
   // When set, sending this invoice relieves inventory and posts COGS for the item.
   inventoryItemId: z.string().nullable().optional(),
   warehouseId: z.string().nullable().optional(),
@@ -224,12 +231,29 @@ export async function POST(request: Request) {
     let subtotal = 0;
     const processedLines = parsed.lines.map((l, i) => {
       const unitPriceCents = unitPricesCents[i];
-      const grossAmount = Math.round(l.quantity * unitPriceCents);
+      
+      const width = l.width || 0;
+      const length = l.length || 0;
+      const sqFt = l.sqFt || ((width > 0 && length > 0) ? width * length : 1);
+      
+      const finishAmount = Math.round((l.finishAmount || 0) * 100);
+      const deliveryAmount = Math.round((l.deliveryAmount || 0) * 100);
+
+      const baseAmount = Math.round(sqFt * l.quantity * unitPriceCents);
+      const grossAmount = baseAmount + finishAmount + deliveryAmount;
+      
       const discountAmount = l.discountPercent ? Math.round(grossAmount * l.discountPercent / 10000) : 0;
       const amount = grossAmount - discountAmount;
       subtotal += amount;
+      
       const taxRateId = l.taxRateId || null;
       const taxAmount = taxRateId ? calcTax(amount, ratesMap.get(taxRateId) ?? 0) : 0;
+      
+      // Auto-split tax into CGST/SGST explicitly
+      const cgstAmount = Math.round(taxAmount / 2);
+      const sgstAmount = taxAmount - cgstAmount;
+      const igstAmount = 0; // Default for now, can be overridden by state logic later
+
       return {
         description: l.description,
         quantity: Math.round(l.quantity * 100),
@@ -238,7 +262,16 @@ export async function POST(request: Request) {
         taxRateId,
         discountPercent: l.discountPercent,
         taxAmount,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
         amount,
+        width,
+        length,
+        sqFt,
+        finishAmount,
+        deliveryMode: l.deliveryMode || null,
+        deliveryAmount,
         costCenterId: l.costCenterId || null,
         projectId: l.projectId || null,
         inventoryItemId: l.inventoryItemId || null,
@@ -248,6 +281,9 @@ export async function POST(request: Request) {
     });
 
     const taxTotal = processedLines.reduce((sum, l) => sum + l.taxAmount, 0);
+    const cgstTotal = processedLines.reduce((sum, l) => sum + l.cgstAmount, 0);
+    const sgstTotal = processedLines.reduce((sum, l) => sum + l.sgstAmount, 0);
+    const igstTotal = processedLines.reduce((sum, l) => sum + l.igstAmount, 0);
     const total = subtotal + taxTotal;
 
     // Credit-limit check: outstanding = sum of non-void invoice.amountDue, less
@@ -331,6 +367,9 @@ export async function POST(request: Request) {
         notes: parsed.notes || null,
         subtotal,
         taxTotal,
+        cgstTotal,
+        sgstTotal,
+        igstTotal,
         total,
         amountPaid: 0,
         amountDue: total,

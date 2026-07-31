@@ -99,7 +99,7 @@ export default function ContractorDetailPage() {
           setCompany(c.company || "");
           setHourlyRate(c.hourlyRate ? (c.hourlyRate / 100).toFixed(2) : "");
           setBankAccount(c.bankAccountNumber || "");
-          setPaymentCurrency(c.currency || "USD");
+          setPaymentCurrency(c.currency || "INR");
         }
       })
       .finally(() => setLoading(false));
@@ -136,7 +136,7 @@ export default function ContractorDetailPage() {
       headers: { "Content-Type": "application/json", "x-organization-id": orgId },
       body: JSON.stringify({
         amount: Math.round(parseFloat(paymentAmount) * 100),
-        currency: paymentCurrency || contractor?.currency || "USD",
+        currency: paymentCurrency || contractor?.currency || "INR",
         description: paymentDesc || undefined,
         invoiceNumber: paymentInvoice || undefined,
       }),
@@ -238,7 +238,7 @@ export default function ContractorDetailPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Hourly Rate</Label>
-              <CurrencyInput prefix="$" value={hourlyRate} onChange={setHourlyRate} />
+              <CurrencyInput value={hourlyRate} onChange={setHourlyRate} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Bank Account</Label>
@@ -263,7 +263,7 @@ export default function ContractorDetailPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                 <div className="space-y-1">
                   <Label className="text-xs">Amount</Label>
-                  <CurrencyInput prefix="$" size="sm" value={paymentAmount} onChange={setPaymentAmount} />
+                  <CurrencyInput size="sm" value={paymentAmount} onChange={setPaymentAmount} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Currency</Label>
@@ -290,7 +290,7 @@ export default function ContractorDetailPage() {
                 {(contractor.payments || []).map((p) => (
                   <div key={p.id} className="flex items-center justify-between px-4 py-2.5">
                     <div>
-                      <p className="text-sm font-medium font-mono tabular-nums">{formatMoney(p.amount, contractor.currency || "USD")}</p>
+                      <p className="text-sm font-medium font-mono tabular-nums">{formatMoney(p.amount, contractor.currency || "INR")}</p>
                       <p className="text-xs text-muted-foreground">{p.description || p.invoiceNumber || "-"}</p>
                     </div>
                     <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { bill, payment, paymentAllocation } from "@/lib/db/schema";
+import { bill, payment, paymentAllocation, bankAccount } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { handleError, notFound } from "@/lib/api/response";
@@ -16,6 +16,7 @@ const paySchema = z.object({
   date: z.string().min(1),
   method: z.enum(["bank_transfer", "cash", "check", "card", "other"]).default("bank_transfer"),
   reference: z.string().nullable().optional(),
+  bankAccountId: z.string().uuid().nullable().optional(),
 });
 
 export async function POST(
@@ -85,6 +86,7 @@ export async function POST(
           amount: parsed.amount,
           method: parsed.method,
           reference: parsed.reference || null,
+          bankAccountId: parsed.bankAccountId || null,
           createdBy: ctx.userId,
         })
         .returning();
@@ -97,6 +99,20 @@ export async function POST(
         amount: parsed.amount,
       });
 
+      // Determine the correct ledger account code for the journal entry
+      let bankAccountCode: string | undefined = undefined;
+      if (parsed.bankAccountId) {
+        const ba = await tx.query.bankAccount.findFirst({
+          where: eq(bankAccount.id, parsed.bankAccountId),
+          with: { chartAccount: true },
+        });
+        if (ba?.chartAccount?.code) bankAccountCode = ba.chartAccount.code;
+      } else if (parsed.method === "cash") {
+        bankAccountCode = "1000"; // Default Cash account
+      } else if (parsed.method === "card") {
+        bankAccountCode = "2110"; // Default Credit Card liability or similar
+      }
+
       // Create payment journal entry
       const journalEntry = await createPaymentJournalEntry(
         { organizationId: ctx.organizationId, userId: ctx.userId },
@@ -105,6 +121,7 @@ export async function POST(
           reference: paymentNumber,
           amount: parsed.amount,
           date: parsed.date,
+          bankAccountCode,
           allocations: [
             {
               amount: parsed.amount,

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { journalEntry, journalLine, chartAccount, organization, taxRate, inventoryItem, inventoryMovement } from "@/lib/db/schema";
+import { journalEntry, journalLine, chartAccount, organization, taxRate, inventoryItem, inventoryMovement, bankAccount, bankTransaction } from "@/lib/db/schema";
 import { eq, and, inArray, sql, isNull } from "drizzle-orm";
 import { recordInventoryReceipt, recordInventoryIssue, type ValuedItem } from "./inventory-valuation";
 import { getExchangeRate, convertAmount, MissingExchangeRateError } from "@/lib/currency/converter";
@@ -18,7 +18,7 @@ const RATE_SCALE = 1_000_000;
  * createPaymentJournalEntry takes one so its journal-entry/line writes commit
  * (or roll back) together with the caller's payment + document updates.
  */
-type Tx = Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** Either the pool or an open transaction — for helpers that must honor a tx. */
 type DbOrTx = typeof db | Tx;
@@ -40,7 +40,7 @@ export async function resolveBaseRate(
     where: eq(organization.id, organizationId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
   const currency = currencyCode ?? base;
   if (currency === base) return { base, currency, rate: RATE_SCALE };
   const rate = await getExchangeRate(organizationId, currency, base, date);
@@ -64,7 +64,7 @@ export async function assertBaseRateAvailable(
     where: eq(organization.id, organizationId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
   const currency = currencyCode ?? base;
   if (currency === base) return;
   const rate = await getExchangeRate(organizationId, currency, base, date);
@@ -177,7 +177,13 @@ export async function findAccountByCode(organizationId: string, code: string, ex
 /** System control/settlement accounts used by tax-aware and inventory postings. */
 const CONTROL_ACCOUNTS = {
   inputVat: { code: "1500", name: "Input VAT / GST Receivable", type: "asset" as const, subType: "input_vat" },
+  inputCgst: { code: "1501", name: "Input CGST Receivable", type: "asset" as const, subType: "input_vat" },
+  inputSgst: { code: "1502", name: "Input SGST Receivable", type: "asset" as const, subType: "input_vat" },
+  inputIgst: { code: "1503", name: "Input IGST Receivable", type: "asset" as const, subType: "input_vat" },
   outputVat: { code: "2200", name: "Output VAT / GST Payable", type: "liability" as const, subType: "output_vat" },
+  outputCgst: { code: "2201", name: "Output CGST Payable", type: "liability" as const, subType: "output_vat" },
+  outputSgst: { code: "2202", name: "Output SGST Payable", type: "liability" as const, subType: "output_vat" },
+  outputIgst: { code: "2203", name: "Output IGST Payable", type: "liability" as const, subType: "output_vat" },
   salesTaxPayable: { code: "2230", name: "Sales Tax Payable", type: "liability" as const, subType: "current" },
   supplierVatReceivable: { code: "1510", name: "VAT Recoverable from Supplier", type: "asset" as const, subType: "current" },
   vatSuspense: { code: "2240", name: "VAT Suspense / Return Clearing", type: "liability" as const, subType: "current" },
@@ -376,6 +382,9 @@ export async function createInvoiceJournalEntry(
     invoiceNumber: string;
     total: number;
     taxTotal: number;
+    cgstTotal?: number;
+    sgstTotal?: number;
+    igstTotal?: number;
     subtotal: number;
     lines: { accountId: string | null; amount: number; taxAmount: number }[];
     date: string;
@@ -408,23 +417,87 @@ export async function createInvoiceJournalEntry(
     })
     .returning();
 
+  const { base } = await resolveBaseRate(
+    ctx.organizationId,
+    invoiceData.currencyCode,
+    invoiceData.date
+  );
+
   const lines: (typeof journalLine.$inferInsert)[] = [];
 
   // CR Revenue accounts per line
+  let fallbackSalesAccount: { id: string } | null | undefined = null;
   for (const line of invoiceData.lines) {
-    if (line.accountId && line.amount > 0) {
-      lines.push({
-        journalEntryId: entry.id,
-        accountId: line.accountId,
-        description: `Invoice ${invoiceData.invoiceNumber}`,
-        debitAmount: 0,
-        creditAmount: line.amount,
-      });
+    if (line.amount > 0) {
+      let actId = line.accountId;
+      if (!actId) {
+        if (!fallbackSalesAccount) {
+          fallbackSalesAccount = await ensureAccountByCode(
+            ctx.organizationId,
+            { code: "4000", name: "Sales", type: "revenue" },
+            base,
+            exec
+          );
+        }
+        actId = fallbackSalesAccount?.id || null;
+      }
+      if (!actId) {
+        throw new Error(`Missing accountId for invoice line and could not resolve fallback Sales account.`);
+      }
+
+      if (actId) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: actId,
+          description: `Invoice ${invoiceData.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: line.amount,
+        });
+      }
     }
   }
 
   // CR Tax Liability if any
-  if (invoiceData.taxTotal > 0) {
+  const hasSplitGst = (invoiceData.cgstTotal ?? 0) > 0 || (invoiceData.sgstTotal ?? 0) > 0 || (invoiceData.igstTotal ?? 0) > 0;
+  
+  if (hasSplitGst) {
+    if (invoiceData.cgstTotal && invoiceData.cgstTotal > 0) {
+      const taxAccount = await ensureControlAccount(ctx.organizationId, "outputCgst", base, exec);
+      if (taxAccount) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: taxAccount.id,
+          description: `CGST on ${invoiceData.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: invoiceData.cgstTotal,
+        });
+      }
+    }
+    if (invoiceData.sgstTotal && invoiceData.sgstTotal > 0) {
+      const taxAccount = await ensureControlAccount(ctx.organizationId, "outputSgst", base, exec);
+      if (taxAccount) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: taxAccount.id,
+          description: `SGST on ${invoiceData.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: invoiceData.sgstTotal,
+        });
+      }
+    }
+    if (invoiceData.igstTotal && invoiceData.igstTotal > 0) {
+      const taxAccount = await ensureControlAccount(ctx.organizationId, "outputIgst", base, exec);
+      if (taxAccount) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: taxAccount.id,
+          description: `IGST on ${invoiceData.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: invoiceData.igstTotal,
+        });
+      }
+    }
+  } else if (invoiceData.taxTotal > 0) {
     const taxAccount = await findAccountByCode(ctx.organizationId, "2200", exec);
     if (taxAccount) {
       lines.push({
@@ -496,6 +569,9 @@ export async function createBillJournalEntry(
     billNumber: string;
     total: number;
     taxTotal: number;
+    cgstTotal?: number;
+    sgstTotal?: number;
+    igstTotal?: number;
     lines: {
       accountId: string | null;
       amount: number;
@@ -565,8 +641,22 @@ export async function createBillJournalEntry(
   // Track the first posted expense line so the legacy remainder path (below) can
   // fold any irrecoverable slice of leftover tax back into a real cost line.
   let firstExpenseLineIndex: number | null = null;
+  let fallbackExpenseAccountId: string | null = null;
   for (const line of billData.lines) {
-    if (!line.accountId || line.amount <= 0) continue;
+    if (line.amount <= 0) continue;
+
+    let actId = line.accountId;
+    if (!actId) {
+      if (!fallbackExpenseAccountId) {
+        const cogsAct = await ensureControlAccount(ctx.organizationId, "cogs", base);
+        fallbackExpenseAccountId = cogsAct?.id || null;
+      }
+      actId = fallbackExpenseAccountId || null;
+    }
+    
+    if (!actId) {
+      throw new Error(`Missing accountId for bill line and could not resolve fallback Expense account.`);
+    }
 
     let expenseDebit = line.amount;
 
@@ -613,7 +703,7 @@ export async function createBillJournalEntry(
     if (firstExpenseLineIndex === null) firstExpenseLineIndex = lines.length;
     lines.push({
       journalEntryId: entry.id,
-      accountId: line.accountId,
+      accountId: actId,
       description: `Bill ${billData.billNumber}`,
       debitAmount: expenseDebit,
       creditAmount: 0,
@@ -663,22 +753,40 @@ export async function createBillJournalEntry(
     // -1500 behaviour rather than guessing recoverability we cannot establish.
   }
   const inputVatDebit = legacyTaxRemainder + recoverableToInputVat;
+  const hasSplitGst = (billData.cgstTotal ?? 0) > 0 || (billData.sgstTotal ?? 0) > 0 || (billData.igstTotal ?? 0) > 0;
+  const cgstRatio = hasSplitGst && billData.taxTotal > 0 ? (billData.cgstTotal ?? 0) / billData.taxTotal : 0;
+  const sgstRatio = hasSplitGst && billData.taxTotal > 0 ? (billData.sgstTotal ?? 0) / billData.taxTotal : 0;
+
   if (inputVatDebit > 0) {
-    // Always ensure-on-demand the Input VAT control account (1500). Previously
-    // the legacy remainder path looked up 1500 with findAccountByCode and, when
-    // an org's chart predated 1500, silently DROPPED this debit leg — leaving an
-    // unbalanced AP credit (or, if it was the only leg, an empty "posted"
-    // header). ensureControlAccount creates 1500 on demand so the input-tax leg
-    // always posts and the entry balances.
-    const taxInputAccountId = await getInputVat();
-    if (taxInputAccountId) {
-      lines.push({
-        journalEntryId: entry.id,
-        accountId: taxInputAccountId,
-        description: `Tax on ${billData.billNumber}`,
-        debitAmount: inputVatDebit,
-        creditAmount: 0,
-      });
+    if (hasSplitGst && billData.taxTotal > 0) {
+      const inputCgstDebit = Math.round(inputVatDebit * cgstRatio);
+      const inputSgstDebit = Math.round(inputVatDebit * sgstRatio);
+      const inputIgstDebit = inputVatDebit - inputCgstDebit - inputSgstDebit;
+
+      const cgstAcct = await ensureControlAccount(ctx.organizationId, "inputCgst", base);
+      const sgstAcct = await ensureControlAccount(ctx.organizationId, "inputSgst", base);
+      const igstAcct = await ensureControlAccount(ctx.organizationId, "inputIgst", base);
+
+      if (cgstAcct && inputCgstDebit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: cgstAcct.id, description: `CGST on ${billData.billNumber}`, debitAmount: inputCgstDebit, creditAmount: 0 });
+      }
+      if (sgstAcct && inputSgstDebit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: sgstAcct.id, description: `SGST on ${billData.billNumber}`, debitAmount: inputSgstDebit, creditAmount: 0 });
+      }
+      if (igstAcct && inputIgstDebit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: igstAcct.id, description: `IGST on ${billData.billNumber}`, debitAmount: inputIgstDebit, creditAmount: 0 });
+      }
+    } else {
+      const taxInputAccountId = await getInputVat();
+      if (taxInputAccountId) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: taxInputAccountId,
+          description: `Tax on ${billData.billNumber}`,
+          debitAmount: inputVatDebit,
+          creditAmount: 0,
+        });
+      }
     }
   }
 
@@ -686,16 +794,37 @@ export async function createBillJournalEntry(
   // the amount actually posted so the AP leg only nets off VAT that hit the GL.
   let outputVatCredited = 0;
   if (reverseChargeOutputVat > 0) {
-    const outId = await getOutputVat();
-    if (outId) {
-      lines.push({
-        journalEntryId: entry.id,
-        accountId: outId,
-        description: `Reverse-charge VAT on ${billData.billNumber}`,
-        debitAmount: 0,
-        creditAmount: reverseChargeOutputVat,
-      });
+    if (hasSplitGst && billData.taxTotal > 0) {
+      const outCgstCredit = Math.round(reverseChargeOutputVat * cgstRatio);
+      const outSgstCredit = Math.round(reverseChargeOutputVat * sgstRatio);
+      const outIgstCredit = reverseChargeOutputVat - outCgstCredit - outSgstCredit;
+
+      const cgstAcct = await ensureControlAccount(ctx.organizationId, "outputCgst", base);
+      const sgstAcct = await ensureControlAccount(ctx.organizationId, "outputSgst", base);
+      const igstAcct = await ensureControlAccount(ctx.organizationId, "outputIgst", base);
+
+      if (cgstAcct && outCgstCredit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: cgstAcct.id, description: `Reverse-charge CGST on ${billData.billNumber}`, debitAmount: 0, creditAmount: outCgstCredit });
+      }
+      if (sgstAcct && outSgstCredit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: sgstAcct.id, description: `Reverse-charge SGST on ${billData.billNumber}`, debitAmount: 0, creditAmount: outSgstCredit });
+      }
+      if (igstAcct && outIgstCredit > 0) {
+        lines.push({ journalEntryId: entry.id, accountId: igstAcct.id, description: `Reverse-charge IGST on ${billData.billNumber}`, debitAmount: 0, creditAmount: outIgstCredit });
+      }
       outputVatCredited = reverseChargeOutputVat;
+    } else {
+      const outId = await getOutputVat();
+      if (outId) {
+        lines.push({
+          journalEntryId: entry.id,
+          accountId: outId,
+          description: `Reverse-charge VAT on ${billData.billNumber}`,
+          debitAmount: 0,
+          creditAmount: reverseChargeOutputVat,
+        });
+        outputVatCredited = reverseChargeOutputVat;
+      }
     }
   }
 
@@ -991,7 +1120,7 @@ export async function createPaymentJournalEntry(
       where: eq(organization.id, ctx.organizationId),
       columns: { defaultCurrency: true },
     });
-    const base = org?.defaultCurrency ?? "USD";
+    const base = org?.defaultCurrency ?? "INR";
 
     let bankTotal = 0;
     let counterTotal = 0;
@@ -1052,6 +1181,7 @@ export async function createPaymentJournalEntry(
       }))
     );
 
+    await autoReconcilePayment(ctx, tx, bankAccount.id, entry, isInvoice ? paymentData.amount : -paymentData.amount);
     return entry;
   }
 
@@ -1073,6 +1203,7 @@ export async function createPaymentJournalEntry(
     },
   ]);
 
+  await autoReconcilePayment(ctx, tx, bankAccount.id, entry, isInvoice ? paymentData.amount : -paymentData.amount);
   return entry;
 }
 
@@ -1400,7 +1531,7 @@ export async function mapBillLinesForPosting(
       where: eq(organization.id, organizationId),
       columns: { defaultCurrency: true },
     });
-    const inv = await ensureControlAccount(organizationId, "inventory", org?.defaultCurrency ?? "USD");
+    const inv = await ensureControlAccount(organizationId, "inventory", org?.defaultCurrency ?? "INR");
     inventoryFallbackId = inv?.id ?? null;
   }
   const out: { accountId: string | null; amount: number; taxAmount: number; taxRateId?: string | null }[] = [];
@@ -1655,7 +1786,7 @@ export async function createVatReturnClearingJournalEntry(
     where: eq(organization.id, ctx.organizationId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
 
   const outputAcct = await ensureControlAccount(ctx.organizationId, "outputVat", base, tx);
   const inputAcct = await ensureControlAccount(ctx.organizationId, "inputVat", base, tx);
@@ -1790,7 +1921,7 @@ export async function recordTaxSettlementJournalEntry(
     where: eq(organization.id, ctx.organizationId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
 
   const suspenseAcct = await ensureControlAccount(ctx.organizationId, "vatSuspense", base, tx);
   if (!suspenseAcct) return null;
@@ -1844,4 +1975,46 @@ export async function recordTaxSettlementJournalEntry(
   }
 
   return entry;
+}
+
+/**
+ * Automatically reconciles and updates the bank balance if a payment 
+ * was made to/from any bank account (Cash, Checking, Savings, etc).
+ */
+export async function autoReconcilePayment(
+  ctx: JournalAutomationContext,
+  tx: Tx,
+  chartAccountId: string,
+  entry: typeof journalEntry.$inferSelect,
+  amount: number, // positive for money in, negative for money out
+  currencyCode?: string
+) {
+  const account = await tx.query.bankAccount.findFirst({
+    where: and(
+      eq(bankAccount.organizationId, ctx.organizationId),
+      eq(bankAccount.chartAccountId, chartAccountId)
+    )
+  });
+
+  if (!account) return;
+
+  const newBalance = account.balance + amount;
+
+  await tx.insert(bankTransaction).values({
+    bankAccountId: account.id,
+    date: entry.date,
+    description: entry.description,
+    reference: entry.reference,
+    amount,
+    balance: newBalance,
+    status: "reconciled",
+    journalEntryId: entry.id,
+    sourceType: entry.sourceType || "payment",
+    currencyCode: currencyCode || account.currencyCode,
+  });
+
+  await tx
+    .update(bankAccount)
+    .set({ balance: newBalance })
+    .where(eq(bankAccount.id, account.id));
 }

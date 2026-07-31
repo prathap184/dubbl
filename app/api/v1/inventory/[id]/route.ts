@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { inventoryItem } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { inventoryItem, hsnMaster, hsnGstRates } from "@/lib/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { requireRole } from "@/lib/api/require-role";
 import { handleError, notFound } from "@/lib/api/response";
@@ -23,6 +23,10 @@ const updateSchema = z.object({
   inventoryAccountId: z.string().nullable().optional(),
   reorderPoint: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  hsnCode: z.string().nullable().optional(),
+  gstRate: z.number().int().nullable().optional(),
+  metadata: z.any().optional(),
+  workflowSteps: z.any().optional(),
 });
 
 export async function GET(
@@ -70,13 +74,41 @@ export async function PATCH(
 
     if (!existing) return notFound("Inventory item");
 
+    let finalGstRate = parsed.gstRate;
+    if (parsed.hsnCode && typeof finalGstRate !== "number" && parsed.hsnCode !== (existing as any).hsnCode) {
+      // Look up the rate if HSN changed and GST rate isn't explicitly provided
+      const hsn = await db.query.hsnMaster.findFirst({
+        where: eq(hsnMaster.hsnCode, parsed.hsnCode),
+      });
+      if (hsn) {
+        const rateRec = await db.query.hsnGstRates.findFirst({
+          where: eq(hsnGstRates.hsnId, hsn.id),
+          orderBy: desc(hsnGstRates.effectiveFrom),
+        });
+        if (rateRec) {
+          finalGstRate = rateRec.gstRate;
+        }
+      }
+    }
+
     const [updated] = await db
       .update(inventoryItem)
-      .set({ ...parsed, updatedAt: new Date() })
+      .set({ 
+        ...parsed, 
+        ...(finalGstRate !== undefined ? { gstRate: finalGstRate } : {}),
+        updatedAt: new Date() 
+      })
       .where(eq(inventoryItem.id, id))
       .returning();
 
     logAudit({ ctx, action: "update", entityType: "inventory_item", entityId: id, changes: diffChanges(existing as Record<string, unknown>, updated as Record<string, unknown>), request });
+
+    // Notify Pixel Marketing (precision-press-erp) to invalidate its products cache
+    fetch("http://localhost:3000/api/cache/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "products" }),
+    }).catch(err => console.error("Failed to revalidate Pixel Marketing cache:", err));
 
     return NextResponse.json({ inventoryItem: updated });
   } catch (err) {
@@ -116,6 +148,13 @@ export async function DELETE(
       changes: existing as Record<string, unknown>,
       request,
     });
+
+    // Notify Pixel Marketing (precision-press-erp) to invalidate its products cache
+    fetch("http://localhost:3000/api/cache/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "products" }),
+    }).catch(err => console.error("Failed to revalidate Pixel Marketing cache:", err));
 
     return NextResponse.json({ success: true });
   } catch (err) {

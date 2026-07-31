@@ -21,7 +21,7 @@ const createSchema = z.object({
   billId: z.string().nullable().optional(),
   purchaseOrderId: z.string().nullable().optional(),
   allocationMethod: z.enum(["by_value", "by_quantity", "by_weight", "manual"]).default("by_value"),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   components: z.array(componentSchema).min(1),
 });
 

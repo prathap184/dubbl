@@ -272,7 +272,7 @@ function InvoiceDocument({ invoice: inv, org, contact, template, labels }: Invoi
             {hasDiscount && <Text style={[s.th, s.cellDiscount]}>Discount</Text>}
             <Text style={[s.th, s.cellAmount]}>Amount</Text>
           </View>
-          {inv.lines.map((line, i) => (
+          {inv.lines.filter(l => l.description !== "Logistics / Shipping").map((line, i) => (
             <View key={i} style={s.tableRow}>
               <Text style={[s.cellDesc, { fontSize: 10 }]}>{line.description}</Text>
               <Text style={[s.cellQty, { color: dark }]}>{(line.quantity / 100).toFixed(2)}</Text>
@@ -292,12 +292,18 @@ function InvoiceDocument({ invoice: inv, org, contact, template, labels }: Invoi
           <View style={s.totalsBlock}>
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Subtotal</Text>
-              <Text style={s.totalValue}>{fmtMoney(inv.subtotal, inv.currencyCode)}</Text>
+              <Text style={s.totalValue}>{fmtMoney(inv.subtotal - (inv.lines.find(l => l.description === "Logistics / Shipping")?.amount || 0), inv.currencyCode)}</Text>
             </View>
             {template.showTaxBreakdown !== false && inv.taxTotal > 0 && (
               <View style={s.totalRow}>
                 <Text style={s.totalLabel}>Tax</Text>
                 <Text style={s.totalValue}>{fmtMoney(inv.taxTotal, inv.currencyCode)}</Text>
+              </View>
+            )}
+            {inv.lines.find(l => l.description === "Logistics / Shipping") && (
+              <View style={s.totalRow}>
+                <Text style={s.totalLabel}>Logistics / Shipping</Text>
+                <Text style={s.totalValue}>{fmtMoney(inv.lines.find(l => l.description === "Logistics / Shipping")!.amount, inv.currencyCode)}</Text>
               </View>
             )}
             <View style={s.totalRow}>
@@ -347,13 +353,13 @@ function InvoiceDocument({ invoice: inv, org, contact, template, labels }: Invoi
             <Text style={s.footerText}>{summaryText}</Text>
             {footerText && <Text style={s.footerText}>{footerText}</Text>}
           </View>
-          <Link src="https://dubbl.dev" style={{ textDecoration: "none" }}>
+          <Link src="https://pixelmarketing.dev" style={{ textDecoration: "none" }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
               <Svg viewBox="0 0 40 32" width={10} height={8}>
                 <Path d="M18 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10h-8V4z" fill="#d1d5db" />
                 <Path d="M4 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10H4V4z" fill="#9ca3af" />
               </Svg>
-              <Text style={{ fontSize: 7, color: "#d1d5db", letterSpacing: 0.5 }}>dubbl</Text>
+              <Text style={{ fontSize: 7, color: "#d1d5db", letterSpacing: 0.5 }}>Pixel Marketing</Text>
             </View>
           </Link>
         </View>

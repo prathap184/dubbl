@@ -55,6 +55,9 @@ interface InvoiceDetail {
   dunningLevel?: number | null;
   subtotal: number;
   taxTotal: number;
+  cgstTotal: number;
+  sgstTotal: number;
+  igstTotal: number;
   total: number;
   amountPaid: number;
   amountDue: number;
@@ -441,7 +444,7 @@ export default function InvoiceDetailPage() {
     fetch("/api/v1/bank-accounts", { headers: { "x-organization-id": orgId } })
       .then((r) => r.json())
       .then((data) => {
-        if (data.data) setBankAccounts(data.data.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
+        if (data.bankAccounts) setBankAccounts(data.bankAccounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
       })
       .catch(() => {});
   }, [orgId, payOpen]);
@@ -766,7 +769,6 @@ export default function InvoiceDetailPage() {
                     <div className="space-y-2">
                       <Label>Amount</Label>
                       <CurrencyInput
-                        prefix="$"
                         value={payAmount}
                         onChange={setPayAmount}
                         placeholder={minorUnitsToDecimal(inv.amountDue, inv.currencyCode)}
@@ -791,7 +793,7 @@ export default function InvoiceDetailPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {bankAccounts.length > 0 && (
+                    {bankAccounts.length > 0 && !["cash", "card"].includes(payMethod) && (
                       <div className="space-y-2">
                         <Label>Bank Account</Label>
                         <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
@@ -843,7 +845,6 @@ export default function InvoiceDetailPage() {
                     <div className="space-y-2">
                       <Label>Custom amount (optional)</Label>
                       <CurrencyInput
-                        prefix="$"
                         value={interestAmount}
                         onChange={setInterestAmount}
                         placeholder="Use my interest rate"
@@ -963,8 +964,8 @@ export default function InvoiceDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {inv.lines.map((line, i) => (
-                  <tr key={line.id} className={i < inv.lines.length - 1 ? "border-b border-dashed" : ""}>
+                {inv.lines.filter(l => l.description !== "Logistics / Shipping").map((line, i, arr) => (
+                  <tr key={line.id} className={i < arr.length - 1 ? "border-b border-dashed" : ""}>
                     <td className="px-6 py-3">
                       <p>{line.description}</p>
                       {line.account && (
@@ -998,12 +999,41 @@ export default function InvoiceDetailPage() {
               <div className="w-full max-w-xs space-y-1.5">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-mono tabular-nums">{formatMoney(inv.subtotal, inv.currencyCode)}</span>
+                  <span className="font-mono tabular-nums">
+                    {formatMoney(
+                      inv.subtotal - (inv.lines.find(l => l.description === "Logistics / Shipping")?.amount || 0),
+                      inv.currencyCode
+                    )}
+                  </span>
                 </div>
                 {inv.taxTotal > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax</span>
                     <span className="font-mono tabular-nums">{formatMoney(inv.taxTotal, inv.currencyCode)}</span>
+                  </div>
+                )}
+                {inv.cgstTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground ml-4 text-xs">CGST</span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{formatMoney(inv.cgstTotal, inv.currencyCode)}</span>
+                  </div>
+                )}
+                {inv.sgstTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground ml-4 text-xs">SGST</span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{formatMoney(inv.sgstTotal, inv.currencyCode)}</span>
+                  </div>
+                )}
+                {inv.igstTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground ml-4 text-xs">IGST</span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{formatMoney(inv.igstTotal, inv.currencyCode)}</span>
+                  </div>
+                )}
+                {inv.lines.find(l => l.description === "Logistics / Shipping") && (
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-muted-foreground font-medium">Logistics / Shipping</span>
+                    <span className="font-mono tabular-nums">{formatMoney(inv.lines.find(l => l.description === "Logistics / Shipping")!.amount, inv.currencyCode)}</span>
                   </div>
                 )}
                 <div className="h-px bg-border my-1" />

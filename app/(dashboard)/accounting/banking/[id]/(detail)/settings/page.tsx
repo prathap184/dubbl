@@ -27,7 +27,7 @@ export default function BankSettingsPage() {
   const { confirm, dialog: confirmDialog } = useConfirm();
   const { account, setAccount, refetch } = useBankAccountContext();
   const [saving, setSaving] = useState(false);
-  const [bankCurrency, setBankCurrency] = useState(account?.currencyCode || "USD");
+  const [bankCurrency, setBankCurrency] = useState(account?.currencyCode || "INR");
   // Which ledger account this bank account is recorded under. Defaults to the
   // one connected automatically; the picker lets the user point it elsewhere.
   const [chartAccountId, setChartAccountId] = useState(account?.chartAccountId ?? "");

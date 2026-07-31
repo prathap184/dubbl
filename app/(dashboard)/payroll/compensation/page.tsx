@@ -117,7 +117,7 @@ export default function CompensationPage() {
 
   const [bandSheet, setBandSheet] = useState(false);
   const [bandSaving, setBandSaving] = useState(false);
-  const [newBand, setNewBand] = useState({ name: "", level: "", minSalary: "", midSalary: "", maxSalary: "", currency: "USD" });
+  const [newBand, setNewBand] = useState({ name: "", level: "", minSalary: "", midSalary: "", maxSalary: "", currency: "INR" });
 
   const [reviewSheet, setReviewSheet] = useState(false);
   const [reviewSaving, setReviewSaving] = useState(false);
@@ -213,7 +213,7 @@ export default function CompensationPage() {
       if (res.ok) {
         toast.success("Band added");
         setBandSheet(false);
-        setNewBand({ name: "", level: "", minSalary: "", midSalary: "", maxSalary: "", currency: "USD" });
+        setNewBand({ name: "", level: "", minSalary: "", midSalary: "", maxSalary: "", currency: "INR" });
         fetchData();
       }
     } catch {
@@ -667,15 +667,15 @@ function BandSheet({
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Min Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.minSalary} onChange={(v) => setNewBand({ ...newBand, minSalary: v })} />
+                  <CurrencyInput value={newBand.minSalary} onChange={(v) => setNewBand({ ...newBand, minSalary: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Mid Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.midSalary} onChange={(v) => setNewBand({ ...newBand, midSalary: v })} />
+                  <CurrencyInput value={newBand.midSalary} onChange={(v) => setNewBand({ ...newBand, midSalary: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Max Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.maxSalary} onChange={(v) => setNewBand({ ...newBand, maxSalary: v })} />
+                  <CurrencyInput value={newBand.maxSalary} onChange={(v) => setNewBand({ ...newBand, maxSalary: v })} />
                 </div>
               </div>
             </div>
@@ -739,7 +739,7 @@ function ReviewSheet({
               </div>
               <div className="space-y-2">
                 <Label>Budget</Label>
-                <CurrencyInput prefix="$" value={newReview.totalBudget} onChange={(v) => setNewReview({ ...newReview, totalBudget: v })} placeholder="Optional" />
+                <CurrencyInput value={newReview.totalBudget} onChange={(v) => setNewReview({ ...newReview, totalBudget: v })} placeholder="Optional" />
               </div>
             </div>
           </div>

@@ -21,6 +21,12 @@ const lineSchema = z.object({
   discountPercent: z.number().int().min(0).max(10000).default(0),
   costCenterId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),
+  width: z.number().nullable().optional(),
+  length: z.number().nullable().optional(),
+  sqFt: z.number().nullable().optional(),
+  finishAmount: z.number().nullable().optional(),
+  deliveryMode: z.string().nullable().optional(),
+  deliveryAmount: z.number().nullable().optional(),
   // When set, sending this invoice relieves inventory and posts COGS for the item.
   inventoryItemId: z.string().nullable().optional(),
   warehouseId: z.string().nullable().optional(),
@@ -144,26 +150,50 @@ export async function PATCH(
 
       let subtotal = 0;
       const processedLines = parsed.lines.map((l, i) => {
-        const grossAmount = decimalToMinorUnits(l.quantity * l.unitPrice, existing.currencyCode);
+        const width = l.width || 0;
+        const length = l.length || 0;
+        const sqFt = l.sqFt || ((width > 0 && length > 0) ? width * length : 1);
+        const finishAmount = Math.round((l.finishAmount || 0) * 100);
+        const deliveryAmount = Math.round((l.deliveryAmount || 0) * 100);
+        
+        const unitPriceCents = decimalToMinorUnits(l.unitPrice, existing.currencyCode);
+        const baseAmount = Math.round(sqFt * l.quantity * unitPriceCents);
+        const grossAmount = baseAmount + finishAmount + deliveryAmount;
+        
         const discountAmount = l.discountPercent
           ? Math.round((grossAmount * l.discountPercent) / 10000)
           : 0;
         const amount = grossAmount - discountAmount;
         subtotal += amount;
+        
         const taxRateId = l.taxRateId || null;
         const taxAmount = taxRateId
           ? calcTax(amount, ratesMap.get(taxRateId) ?? 0)
           : 0;
+          
+        const cgstAmount = Math.round(taxAmount / 2);
+        const sgstAmount = taxAmount - cgstAmount;
+        const igstAmount = 0;
+
         return {
           invoiceId: id,
           description: l.description,
           quantity: Math.round(l.quantity * 100),
-          unitPrice: decimalToMinorUnits(l.unitPrice, existing.currencyCode),
+          unitPrice: unitPriceCents,
           accountId: l.accountId || null,
           taxRateId,
           discountPercent: l.discountPercent,
           taxAmount,
+          cgstAmount,
+          sgstAmount,
+          igstAmount,
           amount,
+          width,
+          length,
+          sqFt,
+          finishAmount,
+          deliveryMode: l.deliveryMode || null,
+          deliveryAmount,
           costCenterId: l.costCenterId || null,
           projectId: l.projectId || null,
           inventoryItemId: l.inventoryItemId || null,
@@ -173,9 +203,15 @@ export async function PATCH(
       });
 
       const taxTotal = processedLines.reduce((sum, l) => sum + l.taxAmount, 0);
+      const cgstTotal = processedLines.reduce((sum, l) => sum + l.cgstAmount, 0);
+      const sgstTotal = processedLines.reduce((sum, l) => sum + l.sgstAmount, 0);
+      const igstTotal = processedLines.reduce((sum, l) => sum + l.igstAmount, 0);
       const total = subtotal + taxTotal;
       patch.subtotal = subtotal;
       patch.taxTotal = taxTotal;
+      patch.cgstTotal = cgstTotal;
+      patch.sgstTotal = sgstTotal;
+      patch.igstTotal = igstTotal;
       patch.total = total;
       // Draft invoices are unpaid, so amountDue tracks the new total.
       patch.amountDue = total - existing.amountPaid;

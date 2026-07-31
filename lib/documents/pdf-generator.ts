@@ -201,6 +201,7 @@ export function generateDocumentHtml(
     : "";
 
   const linesHtml = doc.lines
+    .filter(l => l.description !== "Logistics / Shipping")
     .map(
       (line) => `
     <tr>
@@ -211,6 +212,14 @@ export function generateDocumentHtml(
     </tr>`
     )
     .join("");
+    
+  const logisticsLineDoc = doc.lines.find(l => l.description === "Logistics / Shipping");
+  const logisticsRowDoc = logisticsLineDoc
+      ? `<tr>
+          <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Logistics / Shipping</td>
+          <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(logisticsLineDoc.amount, doc.currencyCode)}</td>
+        </tr>`
+      : "";
 
   const taxRow =
     template.showTaxBreakdown !== false && doc.taxTotal > 0
@@ -342,9 +351,10 @@ export function generateDocumentHtml(
     <tfoot>
       <tr>
         <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Subtotal</td>
-        <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(doc.subtotal, doc.currencyCode)}</td>
+        <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(doc.subtotal - (doc.lines.find(l => l.description === "Logistics / Shipping")?.amount || 0), doc.currencyCode)}</td>
       </tr>
       ${taxRow}
+      ${logisticsRowDoc}
       <tr>
         <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Total</td>
         <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(doc.total, doc.currencyCode)}</td>
@@ -362,12 +372,12 @@ export function generateDocumentHtml(
   <!-- Footer -->
   <div style="margin-top:40px;padding-top:8px;border-top:0.5px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-size:10px;color:#6b7280;">${footerSummary}</span>
-    <a href="https://dubbl.dev" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+    <a href="https://pixelmarketing.dev" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
       <svg viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="12" height="9">
         <path d="M18 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10h-8V4z" fill="#d1d5db"/>
         <path d="M4 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10H4V4z" fill="#9ca3af"/>
       </svg>
-      <span style="font-size:9px;color:#d1d5db;letter-spacing:0.5px;">dubbl</span>
+      <span style="font-size:9px;color:#d1d5db;letter-spacing:0.5px;">Pixel Marketing</span>
     </a>
   </div>
   </div>
@@ -446,6 +456,7 @@ export function generateInvoiceHtml(
     : "";
 
   const linesHtml = invoice.lines
+    .filter(l => l.description !== "Logistics / Shipping")
     .map(
       (line) => `
     <tr>
@@ -456,6 +467,14 @@ export function generateInvoiceHtml(
     </tr>`
     )
     .join("");
+    
+  const logisticsLineInv = invoice.lines.find(l => l.description === "Logistics / Shipping");
+  const logisticsRowInv = logisticsLineInv
+      ? `<tr>
+          <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Logistics / Shipping</td>
+          <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(logisticsLineInv.amount, invoice.currencyCode)}</td>
+        </tr>`
+      : "";
 
   const taxRow =
     template.showTaxBreakdown !== false && invoice.taxTotal > 0
@@ -568,9 +587,10 @@ export function generateInvoiceHtml(
     <tfoot>
       <tr>
         <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Subtotal</td>
-        <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(invoice.subtotal, invoice.currencyCode)}</td>
+        <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(invoice.subtotal - (invoice.lines.find(l => l.description === "Logistics / Shipping")?.amount || 0), invoice.currencyCode)}</td>
       </tr>
       ${taxRow}
+      ${logisticsRowInv}
       <tr>
         <td colspan="3" style="text-align:right;padding:3px 6px 3px 0;color:#6b7280;font-size:12px;border-top:0.5px solid #e5e7eb;">Total</td>
         <td style="text-align:right;padding:3px 0;font-size:12px;border-top:0.5px solid #e5e7eb;">${formatMoney(invoice.total, invoice.currencyCode)}</td>
@@ -591,12 +611,12 @@ export function generateInvoiceHtml(
   <!-- Footer -->
   <div style="margin-top:40px;padding-top:8px;border-top:0.5px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-size:10px;color:#6b7280;">${invoice.invoiceNumber} · ${formatMoney(amountDue, invoice.currencyCode)} due ${invoice.dueDate}</span>
-    <a href="https://dubbl.dev" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+    <a href="https://pixelmarketing.dev" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
       <svg viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="12" height="9">
         <path d="M18 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10h-8V4z" fill="#d1d5db"/>
         <path d="M4 4h8a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10H4V4z" fill="#9ca3af"/>
       </svg>
-      <span style="font-size:9px;color:#d1d5db;letter-spacing:0.5px;">dubbl</span>
+      <span style="font-size:9px;color:#d1d5db;letter-spacing:0.5px;">Pixel Marketing</span>
     </a>
   </div>
   </div>

@@ -188,7 +188,7 @@ export function registerContactTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
+        .default("INR")
         .describe("Default currency code"),
       is1099Vendor: z
         .boolean()
@@ -214,7 +214,7 @@ export function registerContactTools(server: McpServer, ctx: AuthContext) {
         requireRole(ctx, "manage:contacts");
 
         await checkResourceLimit(ctx.organizationId, contact, contact.organizationId, "contacts", contact.deletedAt);
-        await checkMultiCurrency(ctx.organizationId, params.currencyCode ?? "USD");
+        await checkMultiCurrency(ctx.organizationId, params.currencyCode ?? "INR");
 
         const [created] = await db
           .insert(contact)

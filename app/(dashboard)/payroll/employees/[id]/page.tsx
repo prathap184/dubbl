@@ -163,7 +163,7 @@ export default function EmployeeDetailPage() {
           setIsActive(e.isActive);
           setCompensationType(e.compensationType || "salary");
           setHourlyRate(e.hourlyRate ? (e.hourlyRate / 100).toFixed(2) : "");
-          setCurrency(e.currency || "USD");
+          setCurrency(e.currency || "INR");
         }
       })
       .finally(() => setLoading(false));
@@ -473,7 +473,6 @@ export default function EmployeeDetailPage() {
             <div className="space-y-1.5">
               <Label className="text-xs">Annual Salary</Label>
               <CurrencyInput
-                prefix="$"
                 value={salary}
                 onChange={setSalary}
               />
@@ -503,7 +502,7 @@ export default function EmployeeDetailPage() {
             {compensationType === "hourly" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Hourly Rate</Label>
-                <CurrencyInput prefix="$" value={hourlyRate} onChange={setHourlyRate} />
+                <CurrencyInput value={hourlyRate} onChange={setHourlyRate} />
               </div>
             )}
             <div className="space-y-1.5">
@@ -642,7 +641,6 @@ export default function EmployeeDetailPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Additional Federal Withholding</Label>
                   <CurrencyInput
-                    prefix="$"
                     value={tcAddlFederal}
                     onChange={setTcAddlFederal}
                   />
@@ -650,7 +648,6 @@ export default function EmployeeDetailPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Additional State Withholding</Label>
                   <CurrencyInput
-                    prefix="$"
                     value={tcAddlState}
                     onChange={setTcAddlState}
                   />

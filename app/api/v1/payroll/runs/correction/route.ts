@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       itemEmp.set(it.id, it.employeeId);
       const agg = parentByEmp.get(it.employeeId) ?? {
         gross: 0,
-        currency: it.currency ?? "USD",
+        currency: it.currency ?? "INR",
         fxRate: it.fxRate ?? 1,
         breakdown: [],
         employerBreakdown: [],

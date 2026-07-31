@@ -24,7 +24,7 @@ const createSchema = z.object({
   memberId: z.string().uuid().nullable().optional(),
   compensationType: z.enum(["salary", "hourly", "milestone", "commission"]).default("salary"),
   hourlyRate: z.number().int().min(0).nullable().optional(),
-  currency: currencyCodeSchema.default("USD"),
+  currency: currencyCodeSchema.default("INR"),
 });
 
 export async function GET(request: Request) {

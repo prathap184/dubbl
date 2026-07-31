@@ -54,7 +54,7 @@ export async function POST(
       total: 33000,
       amountPaid: 0,
       amountDue: 33000,
-      currencyCode: "USD",
+      currencyCode: "INR",
       reference: "PO-123",
       notes: null,
     };

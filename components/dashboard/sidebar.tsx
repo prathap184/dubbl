@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, ArrowLeft } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -87,6 +87,7 @@ const sections: NavSection[] = [
       { label: "Teams", href: "/teams", icon: UsersAnimatedIcon },
       { label: "Inventory", href: "/inventory", icon: ReceiptAnimatedIcon },
       { label: "Payroll", href: "/payroll", icon: LandmarkAnimatedIcon },
+      { label: "Pixel Orders", href: "/pixel-orders", icon: CartIcon },
     ],
   },
   {
@@ -324,6 +325,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="px-2">
+        {/* ── Back to Pixel Marketing ───────────────────────────── */}
+        <a
+          href={process.env.NEXT_PUBLIC_PIXEL_MARKETING_URL || "http://localhost:3000"}
+          className="flex items-center gap-2.5 px-3 py-2 mb-1 rounded-lg text-xs font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
+          title="Go back to Pixel Marketing"
+        >
+          <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
+          <span>Back to Pixel Marketing</span>
+        </a>
         <SidebarMenu className="gap-0.5">
           {footerItems.map((item) => (
             <NavItemLink

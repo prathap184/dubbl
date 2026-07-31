@@ -15,7 +15,7 @@ const createSchema = z.object({
   type: z.enum(["asset", "liability", "equity", "revenue", "expense"]),
   subType: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   description: z.string().nullable().optional(),
   // Account-driven tax defaulting: lines coded to this account
   // pick up this tax rate by default.

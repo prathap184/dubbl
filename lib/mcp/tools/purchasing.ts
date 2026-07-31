@@ -161,7 +161,7 @@ export function registerPurchasingTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
+        .default("INR")
         .describe("Currency code (ISO 4217, e.g. USD)"),
       lines: z
         .array(

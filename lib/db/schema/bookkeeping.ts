@@ -90,7 +90,7 @@ export const chartAccount = pgTable(
     parentId: uuid("parent_id"),
     currencyCode: text("currency_code")
       .notNull()
-      .default("USD"),
+      .default("INR"),
     isActive: boolean("is_active").notNull().default(true),
     description: text("description"),
     // Default tax rate applied to lines coded to this account
@@ -193,7 +193,7 @@ export const journalLine = pgTable("journal_line", {
   description: text("description"),
   debitAmount: integer("debit_amount").notNull().default(0),
   creditAmount: integer("credit_amount").notNull().default(0),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   exchangeRate: integer("exchange_rate").notNull().default(1000000), // 6 decimal places as int (1.000000 = 1000000)
   costCenterId: uuid("cost_center_id").references(() => costCenter.id),
   // Project/job dimension (alongside cost center) for job-costing & tracking

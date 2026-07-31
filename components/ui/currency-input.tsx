@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useOrganization } from "@/components/dashboard/org-loader";
+import { getCurrencySymbol } from "@/lib/money";
 
 interface CurrencyInputProps {
   value: string | number;
@@ -20,12 +22,15 @@ export function CurrencyInput({
   onChange,
   placeholder = "0.00",
   className,
-  prefix,
+  prefix: manualPrefix,
   size = "default",
   disabled,
   name,
   id,
 }: CurrencyInputProps) {
+  const { organization } = useOrganization();
+  const prefix = manualPrefix !== undefined ? manualPrefix : getCurrencySymbol(organization?.currency);
+
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   return (

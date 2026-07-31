@@ -383,7 +383,7 @@ export default function ContractorsPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       {c.hourlyRate && (
                         <span className="flex items-center gap-1.5 text-sm font-mono tabular-nums">
-                          {formatMoney(c.hourlyRate, c.currency || "USD")}/hr
+                          {formatMoney(c.hourlyRate, c.currency || "INR")}/hr
                           {c.currency && c.currency !== "USD" && (
                             <code className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">{c.currency}</code>
                           )}

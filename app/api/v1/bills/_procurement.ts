@@ -601,6 +601,9 @@ export async function postBillReceipt(
     issueDate: string;
     currencyCode?: string;
     taxTotal: number;
+    cgstTotal?: number;
+    sgstTotal?: number;
+    igstTotal?: number;
     total: number;
     lines: BillLineForProcurement[];
   },
@@ -611,6 +614,9 @@ export async function postBillReceipt(
         billNumber: string;
         total: number;
         taxTotal: number;
+        cgstTotal?: number;
+        sgstTotal?: number;
+        igstTotal?: number;
         lines: {
           accountId: string | null;
           amount: number;
@@ -679,6 +685,9 @@ export async function postBillReceipt(
     billNumber: bill.billNumber,
     total: bill.total,
     taxTotal: bill.taxTotal,
+    cgstTotal: bill.cgstTotal,
+    sgstTotal: bill.sgstTotal,
+    igstTotal: bill.igstTotal,
     lines: unmatchedForPosting,
     date: bill.issueDate,
     currencyCode: bill.currencyCode,

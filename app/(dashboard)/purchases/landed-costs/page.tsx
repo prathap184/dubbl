@@ -48,7 +48,7 @@ interface LandedCost {
 }
 
 const formatMoney = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "INR" });
 
 export default function LandedCostsPage() {
   const router = useRouter();

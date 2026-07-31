@@ -146,8 +146,8 @@ export function registerLandedCostTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
-        .describe("Currency code (ISO 4217, e.g. USD); defaults to USD"),
+        .default("INR")
+        .describe("Currency code (ISO 4217, e.g. USD); defaults to INR"),
       components: z
         .array(
           z.object({

@@ -1,5 +1,5 @@
 {
-  "name": "dubbl",
+  "name": "pixel-marketing",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.30.3",
@@ -29,6 +29,7 @@
     "@react-email/components": "^1.0.9",
     "@react-email/render": "^2.0.4",
     "@react-pdf/renderer": "^4.3.2",
+    "@supabase/supabase-js": "^2.110.8",
     "@trigger.dev/sdk": "4.4.6",
     "@types/mdx": "^2.0.13",
     "@types/nodemailer": "^7.0.11",

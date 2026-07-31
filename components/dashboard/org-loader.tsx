@@ -1,11 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { Logo } from "@/components/shared/logo";
+import { setActiveCurrency } from "@/lib/money";
+
+export interface Organization {
+  id: string;
+  name: string;
+  currency: string;
+  country: string | null;
+  timezone: string;
+  // add more as needed
+}
+
+export const OrganizationContext = createContext<{ organization: Organization | null }>({ organization: null });
+
+export function useOrganization() {
+  return useContext(OrganizationContext);
+}
 
 export function OrgLoader({ children }: { children: React.ReactNode }) {
   const FADE_DURATION_MS = 400;
   const [state, setState] = useState<"loading" | "ready" | "fading">("loading");
+  const [organization, setOrganization] = useState<Organization | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,6 +59,8 @@ export function OrgLoader({ children }: { children: React.ReactNode }) {
             window.location.href = "/onboarding";
             return;
           }
+          setOrganization(org);
+          setActiveCurrency(org.currency);
         } else {
           // User has no orgs at all, redirect to onboarding
           window.location.href = "/onboarding";
@@ -60,7 +79,7 @@ export function OrgLoader({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <>
+    <OrganizationContext.Provider value={{ organization }}>
       {state !== "ready" && (
         <div
           className={`org-loader-overlay ${state === "fading" ? "org-loader-fade-out" : ""}`}
@@ -68,12 +87,12 @@ export function OrgLoader({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col items-center gap-4">
             <Logo className="org-loader-logo h-10 w-auto" />
             <span className="text-sm font-medium tracking-tight text-muted-foreground/60">
-              dubbl
+              Pixel Marketing
             </span>
           </div>
         </div>
       )}
       {state === "ready" && children}
-    </>
+    </OrganizationContext.Provider>
   );
 }

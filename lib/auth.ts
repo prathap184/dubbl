@@ -1,4 +1,5 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
+import { createClient } from "@supabase/supabase-js";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
@@ -64,8 +65,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         totp: { label: "2FA Code", type: "text" },
+        // SSO fast-path: passed from precision-press-erp accounting redirect
+        ssoToken: { label: "SSO Token", type: "text" },
       },
       async authorize(credentials) {
+        // ── SSO fast-path ────────────────────────────────────────────────────
+        // When the user clicks "Accounting" in precision-press-erp, their
+        // Supabase access_token is forwarded here. We verify it and skip the
+        // password check entirely — the Supabase token IS the proof of identity.
+        if (credentials?.ssoToken && credentials?.email) {
+          const supabase = createClient(
+            process.env.SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+          );
+          const { data: { user: supabaseUser }, error } =
+            await supabase.auth.getUser(credentials.ssoToken as string);
+
+          if (error || !supabaseUser?.email) return null;
+
+          // Emails must match — prevents token reuse for a different account
+          if (supabaseUser.email.toLowerCase() !== (credentials.email as string).toLowerCase()) {
+            return null;
+          }
+
+          const user = await db.query.users.findFirst({
+            where: sql`lower(${users.email}) = lower(${supabaseUser.email})`,
+          });
+
+          if (!user) return null;
+
+          return { id: user.id, name: user.name, email: user.email, image: user.image };
+        }
+
+        // ── Normal email + password login ────────────────────────────────────
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 

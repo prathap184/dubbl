@@ -86,13 +86,13 @@ export function registerPricingTools(server: McpServer, ctx: AuthContext) {
 
   server.tool(
     "create_price_list",
-    "Create a new price list (price book) for this organization. currencyCode is the ISO currency all prices in the list are denominated in (defaults to USD). Optionally set isActive (default true) and a validity window effectiveFrom/effectiveTo (YYYY-MM-DD; null = unbounded). Returns the created price list. Add item prices afterwards with add_price_list_item.",
+    "Create a new price list (price book) for this organization. currencyCode is the ISO currency all prices in the list are denominated in (defaults to INR). Optionally set isActive (default true) and a validity window effectiveFrom/effectiveTo (YYYY-MM-DD; null = unbounded). Returns the created price list. Add item prices afterwards with add_price_list_item.",
     {
       name: z.string().describe("Human-readable name for the price list (e.g. 'Wholesale USD')"),
       currencyCode: z
         .string()
         .optional()
-        .describe("ISO currency code the prices are denominated in (defaults to USD)"),
+        .describe("ISO currency code the prices are denominated in (defaults to INR)"),
       isActive: z
         .boolean()
         .optional()
@@ -116,7 +116,7 @@ export function registerPricingTools(server: McpServer, ctx: AuthContext) {
           .values({
             organizationId: ctx.organizationId,
             name: params.name,
-            currencyCode: params.currencyCode ?? "USD",
+            currencyCode: params.currencyCode ?? "INR",
             isActive: params.isActive ?? true,
             effectiveFrom: params.effectiveFrom ?? null,
             effectiveTo: params.effectiveTo ?? null,

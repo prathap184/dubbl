@@ -521,7 +521,7 @@ export default function EntryDetailPage() {
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-red-600 dark:text-red-400"
                   )}>
-                    {isBalanced ? "$0.00" : formatMoney(Math.round(Math.abs(totalDebit - totalCredit) * 100))}
+                    {isBalanced ? formatMoney(0) : formatMoney(Math.round(Math.abs(totalDebit - totalCredit) * 100))}
                   </span>
                 </div>
               </div>
@@ -749,13 +749,11 @@ function EditEntrySheet({
                   />
                 </div>
                 <CurrencyInput
-                  prefix="$"
                   value={l.debit}
                   onChange={(v) => update(i, { debit: v, credit: v ? "" : l.credit })}
                   placeholder="Debit"
                 />
                 <CurrencyInput
-                  prefix="$"
                   value={l.credit}
                   onChange={(v) => update(i, { credit: v, debit: v ? "" : l.debit })}
                   placeholder="Credit"

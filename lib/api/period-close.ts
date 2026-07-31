@@ -47,7 +47,7 @@ export async function getRetainedEarningsAccount(organizationId: string) {
   return ensureAccountByCode(
     organizationId,
     { code: "3100", name: "Retained Earnings", type: "equity", subType: "retained" },
-    org?.defaultCurrency ?? "USD"
+    org?.defaultCurrency ?? "INR"
   );
 }
 

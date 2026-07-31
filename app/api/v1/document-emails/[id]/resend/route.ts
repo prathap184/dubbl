@@ -48,7 +48,7 @@ export async function POST(
               invoiceNumber: inv.invoiceNumber,
               issueDate: inv.issueDate,
               dueDate: inv.dueDate,
-              currencyCode: "USD",
+              currencyCode: "INR",
               lines: inv.lines.map((l) => ({
                 description: l.description,
                 quantity: l.quantity,

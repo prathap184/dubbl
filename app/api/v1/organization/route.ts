@@ -281,7 +281,7 @@ export async function PATCH(request: Request) {
     // real VAT/GST rate immediately instead of only "No tax". Both are
     // idempotent; tax seeding is best-effort so it never blocks onboarding.
     if (existing?.country === null && updated.country !== null) {
-      await seedDefaultAccounts(ctx.organizationId, updated.defaultCurrency || "USD", updated.countryCode || undefined);
+      await seedDefaultAccounts(ctx.organizationId, updated.defaultCurrency || "INR", updated.countryCode || undefined);
       try {
         await ensureTaxRatesSeeded(ctx.organizationId, updated.countryCode || updated.country || undefined);
       } catch {

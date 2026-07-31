@@ -122,8 +122,8 @@ export function registerDebitNoteTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
-        .describe("Currency code (defaults to USD)"),
+        .default("INR")
+        .describe("Currency code (defaults to INR)"),
       lines: z
         .array(
           z.object({

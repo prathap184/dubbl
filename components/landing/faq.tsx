@@ -9,49 +9,49 @@ import { SectionHeader } from "@/components/shared/section-header";
 
 const faqs = [
   {
-    question: "Is dubbl really free?",
+    question: "Is Pixel Marketing really free?",
     answer:
-      "Yes. dubbl is open source under the Apache 2.0 license. You can self-host it for free with no feature limitations, no user caps, and no hidden costs.",
+      "Yes. Pixel Marketing is open source under the Apache 2.0 license. You can self-host it for free with no feature limitations, no user caps, and no hidden costs.",
   },
   {
-    question: "Can I self-host dubbl?",
+    question: "Can I self-host Pixel Marketing?",
     answer:
-      "Absolutely. dubbl is designed for self-hosting. We provide Docker images, Helm charts, and comprehensive deployment guides for AWS, GCP, and bare metal.",
+      "Absolutely. Pixel Marketing is designed for self-hosting. We provide Docker images, Helm charts, and comprehensive deployment guides for AWS, GCP, and bare metal.",
   },
   {
-    question: "Does dubbl support multi-currency?",
+    question: "Does Pixel Marketing support multi-currency?",
     answer:
-      "Yes. dubbl supports transactions in any currency with automatic exchange rate conversion. Realized and unrealized gain/loss tracking is built in.",
+      "Yes. Pixel Marketing supports transactions in any currency with automatic exchange rate conversion. Realized and unrealized gain/loss tracking is built in.",
   },
   {
-    question: "How does double-entry bookkeeping work in dubbl?",
+    question: "How does double-entry bookkeeping work in Pixel Marketing?",
     answer:
-      "Every transaction must have balanced debits and credits. This is enforced at the database level, meaning it's impossible to create an unbalanced entry. dubbl supports multi-leg journal entries for complex transactions.",
+      "Every transaction must have balanced debits and credits. This is enforced at the database level, meaning it's impossible to create an unbalanced entry. Pixel Marketing supports multi-leg journal entries for complex transactions.",
   },
   {
     question: "Can I migrate from QuickBooks or Xero?",
     answer:
-      "Yes. dubbl supports CSV import with built-in column mapping for QuickBooks, Xero, FreshBooks, and Wave. You can import accounts, contacts, invoices, bills, journal entries, products, and bank transactions from any CSV file.",
+      "Yes. Pixel Marketing supports CSV import with built-in column mapping for QuickBooks, Xero, FreshBooks, and Wave. You can import accounts, contacts, invoices, bills, journal entries, products, and bank transactions from any CSV file.",
   },
   {
     question: "Is there an API?",
     answer:
-      "dubbl is API-first. Every feature available in the UI is also accessible via our REST API with comprehensive OpenAPI documentation. dubbl also supports the Model Context Protocol (MCP), allowing AI assistants to interact with your business data directly.",
+      "Pixel Marketing is API-first. Every feature available in the UI is also accessible via our REST API with comprehensive OpenAPI documentation. Pixel Marketing also supports the Model Context Protocol (MCP), allowing AI assistants to interact with your business data directly.",
   },
   {
-    question: "How do I contribute to dubbl?",
+    question: "How do I contribute to Pixel Marketing?",
     answer:
       "We welcome contributions! Check out our GitHub repository for contributing guidelines, open issues labeled 'good first issue', and our development setup guide.",
   },
   {
-    question: "Is dubbl suitable for enterprise use?",
+    question: "Is Pixel Marketing suitable for enterprise use?",
     answer:
-      "Yes. dubbl includes features like audit trails, role-based access control, SSO/SAML support, and multi-tenant architecture. Beyond accounting, dubbl covers inventory management, project management, payroll, and CRM. Many companies use dubbl in production as their core business platform.",
+      "Yes. Pixel Marketing includes features like audit trails, role-based access control, SSO/SAML support, and multi-tenant architecture. Beyond accounting, Pixel Marketing covers inventory management, project management, payroll, and CRM. Many companies use Pixel Marketing in production as their core business platform.",
   },
   {
     question: "What is MCP support?",
     answer:
-      "MCP (Model Context Protocol) is an open standard that lets AI assistants interact with external tools and data. dubbl ships with 15 built-in MCP tool modules covering contacts, invoices, inventory, projects, and more. This means AI agents like Claude can read, create, and manage your business data directly through a structured protocol.",
+      "MCP (Model Context Protocol) is an open standard that lets AI assistants interact with external tools and data. Pixel Marketing ships with 15 built-in MCP tool modules covering contacts, invoices, inventory, projects, and more. This means AI agents like Claude can read, create, and manage your business data directly through a structured protocol.",
   },
 ];
 
@@ -71,7 +71,7 @@ export function FAQ() {
             <p className="text-sm text-muted-foreground">
               Can&apos;t find what you&apos;re looking for? Reach out on{" "}
               <a
-                href="https://github.com/dubbl-org/dubbl/discussions"
+                href="https://github.com/Pixel Marketing-org/Pixel Marketing/discussions"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-emerald-600 underline underline-offset-4 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300"

@@ -129,7 +129,7 @@ const TAX_RATES = [
 ];
 
 async function seed() {
-  console.log("Seeding dubbl demo data...\n");
+  console.log("Seeding Pixel Marketing demo data...\n");
 
   // 1. Currencies — upsert so codes are present and metadata stays correct.
   console.log("Seeding currencies...");
@@ -149,7 +149,7 @@ async function seed() {
 
   // Prefer the dev user's org first, then fall back to any owner membership
   const devUser = await db.query.users.findFirst({
-    where: eq(users.email, "dev@dubbl.local"),
+    where: eq(users.email, "dev@Pixel Marketing.local"),
     columns: { id: true },
   });
 
@@ -182,7 +182,7 @@ async function seed() {
       .values({
         id: "00000000-0000-0000-0000-000000000001",
         name: "Demo User",
-        email: "demo@dubbl.dev",
+        email: "demo@Pixel Marketing.dev",
         passwordHash,
         isSiteAdmin: true,
       })
@@ -200,7 +200,7 @@ async function seed() {
         id: "00000000-0000-0000-0000-000000000002",
         name: "Demo Company",
         slug: "demo-company",
-        defaultCurrency: "USD",
+        defaultCurrency: "INR",
         fiscalYearStartMonth: 1,
       })
       .returning();
@@ -361,11 +361,11 @@ async function seed() {
     .returning();
 
   await db.insert(journalLine).values([
-    { journalEntryId: openingEntry.id, accountId: accountMap.get("1100")!, debitAmount: 5000000, creditAmount: 0 }, // $50,000 checking
-    { journalEntryId: openingEntry.id, accountId: accountMap.get("1110")!, debitAmount: 2500000, creditAmount: 0 }, // $25,000 savings
-    { journalEntryId: openingEntry.id, accountId: accountMap.get("1200")!, debitAmount: 1200000, creditAmount: 0 }, // $12,000 AR
-    { journalEntryId: openingEntry.id, accountId: accountMap.get("1620")!, debitAmount: 800000, creditAmount: 0 }, // $8,000 computers
-    { journalEntryId: openingEntry.id, accountId: accountMap.get("3000")!, debitAmount: 0, creditAmount: 9500000 }, // $95,000 equity
+    { journalEntryId: openingEntry.id, accountId: accountMap.get("1100")!, debitAmount: 5000000, creditAmount: 0 }, // ₹50,000 checking
+    { journalEntryId: openingEntry.id, accountId: accountMap.get("1110")!, debitAmount: 2500000, creditAmount: 0 }, // ₹25,000 savings
+    { journalEntryId: openingEntry.id, accountId: accountMap.get("1200")!, debitAmount: 1200000, creditAmount: 0 }, // ₹12,000 AR
+    { journalEntryId: openingEntry.id, accountId: accountMap.get("1620")!, debitAmount: 800000, creditAmount: 0 }, // ₹8,000 computers
+    { journalEntryId: openingEntry.id, accountId: accountMap.get("3000")!, debitAmount: 0, creditAmount: 9500000 }, // ₹95,000 equity
   ]);
 
   // Monthly revenue/expense entries (Jan-Feb 2026)
@@ -392,7 +392,7 @@ async function seed() {
       })
       .returning();
 
-    const revenue = 250000 + Math.floor(Math.random() * 300000); // $2,500 - $5,500
+    const revenue = 250000 + Math.floor(Math.random() * 300000); // ₹2,500 - ₹5,500
     await db.insert(journalLine).values([
       { journalEntryId: e.id, accountId: accountMap.get("1200")!, debitAmount: revenue, creditAmount: 0 },
       { journalEntryId: e.id, accountId: accountMap.get("4010")!, debitAmount: 0, creditAmount: revenue },
@@ -471,7 +471,7 @@ async function seed() {
         total: lineAmount,
         amountPaid: inv.paid,
         amountDue: lineAmount - inv.paid,
-        currencyCode: "USD",
+        currencyCode: "INR",
       })
       .returning();
 
@@ -554,7 +554,7 @@ async function seed() {
         total: cn.total,
         amountApplied: cn.amountApplied,
         amountRemaining: cn.amountRemaining,
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
         sentAt: cn.status !== "draft" ? new Date(cn.date) : undefined,
       })
@@ -610,7 +610,7 @@ async function seed() {
         total: b.amount,
         amountPaid: b.paid,
         amountDue: b.amount - b.paid,
-        currencyCode: "USD",
+        currencyCode: "INR",
       })
       .returning();
 
@@ -643,7 +643,7 @@ async function seed() {
       accountName: "Business Checking",
       accountNumber: "****4567",
       bankName: "First National Bank",
-      currencyCode: "USD",
+      currencyCode: "INR",
       chartAccountId: accountMap.get("1100")!,
       balance: 5000000,
     })
@@ -656,7 +656,7 @@ async function seed() {
       accountName: "Business Savings",
       accountNumber: "****8901",
       bankName: "First National Bank",
-      currencyCode: "USD",
+      currencyCode: "INR",
       chartAccountId: accountMap.get("1110")!,
       balance: 2500000,
     });
@@ -668,7 +668,7 @@ async function seed() {
       accountName: "Business Credit Card",
       accountNumber: "****2345",
       bankName: "Capital One",
-      currencyCode: "USD",
+      currencyCode: "INR",
       chartAccountId: accountMap.get("2600")!,
       balance: -125000,
     });
@@ -727,7 +727,7 @@ async function seed() {
         method: payNum % 2 === 0 ? "bank_transfer" : "card",
         reference: `REF-${payNum}`,
         bankAccountId: checkingBank.id,
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
       })
       .returning();
@@ -754,7 +754,7 @@ async function seed() {
         method: "bank_transfer",
         reference: `CHK-${payNum}`,
         bankAccountId: checkingBank.id,
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
       })
       .returning();
@@ -791,7 +791,7 @@ async function seed() {
         lastRunDate: "2026-02-01",
         occurrencesGenerated: 2,
         status: "active",
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
       })
       .returning();
@@ -828,13 +828,13 @@ async function seed() {
     .returning();
 
   const budgetAccounts = [
-    { code: "4010", monthly: 500000 },  // $5,000/mo revenue
-    { code: "5100", monthly: 1200000 }, // $12,000/mo wages
-    { code: "5200", monthly: 350000 },  // $3,500/mo rent
-    { code: "5220", monthly: 10000 },   // $100/mo internet
-    { code: "5300", monthly: 15000 },   // $150/mo supplies
-    { code: "5400", monthly: 25000 },   // $250/mo insurance
-    { code: "5600", monthly: 50000 },   // $500/mo marketing
+    { code: "4010", monthly: 500000 },  // ₹5,000/mo revenue
+    { code: "5100", monthly: 1200000 }, // ₹12,000/mo wages
+    { code: "5200", monthly: 350000 },  // ₹3,500/mo rent
+    { code: "5220", monthly: 10000 },   // ₹100/mo internet
+    { code: "5300", monthly: 15000 },   // ₹150/mo supplies
+    { code: "5400", monthly: 25000 },   // ₹250/mo insurance
+    { code: "5600", monthly: 50000 },   // ₹500/mo marketing
   ];
 
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1200,7 +1200,7 @@ async function seed() {
       submittedBy: userId,
       status: "approved",
       totalAmount: 85000,
-      currencyCode: "USD",
+      currencyCode: "INR",
       submittedAt: new Date("2026-01-28"),
       approvedAt: new Date("2026-01-30"),
       approvedBy: userId,
@@ -1246,7 +1246,7 @@ async function seed() {
       submittedBy: userId,
       status: "submitted",
       totalAmount: 15900,
-      currencyCode: "USD",
+      currencyCode: "INR",
       submittedAt: new Date("2026-02-15"),
     })
     .returning();
@@ -1778,7 +1778,7 @@ async function seed() {
         subtotal: q.price,
         taxTotal: 0,
         total: q.price,
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
         sentAt: q.status !== "draft" ? new Date(q.date) : undefined,
       }).returning();
@@ -1831,7 +1831,7 @@ async function seed() {
         subtotal: po.amount,
         taxTotal: 0,
         total: po.amount,
-        currencyCode: "USD",
+        currencyCode: "INR",
         createdBy: userId,
         sentAt: po.status !== "draft" ? new Date(po.date) : undefined,
       }).returning();
@@ -1882,7 +1882,7 @@ async function seed() {
           total: dn.amount,
           amountApplied: 0,
           amountRemaining: dn.amount,
-          currencyCode: "USD",
+          currencyCode: "INR",
           createdBy: userId,
           sentAt: dn.status !== "draft" ? new Date(dn.date) : undefined,
         }).returning();
@@ -2011,7 +2011,7 @@ async function seed() {
         contactId: allContacts2[d.contact].id,
         title: d.title,
         valueCents: d.value,
-        currency: "USD",
+        currency: "INR",
         probability: d.prob,
         expectedCloseDate: d.close,
         assignedTo: userId,
@@ -2069,7 +2069,7 @@ async function seed() {
       organizationId: org.id,
       name: "Equipment Financing",
       bankAccountId: bankAccts2[0]?.id,
-      principalAmount: 5000000, // $50,000
+      principalAmount: 5000000, // ₹50,000
       interestRate: 650, // 6.5%
       termMonths: 36,
       startDate: "2026-01-01",
@@ -2102,7 +2102,7 @@ async function seed() {
       organizationId: org.id,
       name: "Office Renovation Loan",
       bankAccountId: bankAccts2[0]?.id,
-      principalAmount: 2500000, // $25,000
+      principalAmount: 2500000, // ₹25,000
       interestRate: 550, // 5.5%
       termMonths: 24,
       startDate: "2026-02-01",
@@ -2198,13 +2198,13 @@ async function seed() {
   if (!existingNotifs) {
     console.log("Creating notifications...");
     await db.insert(notification).values([
-      { organizationId: org.id, userId, type: "invoice_overdue", title: "Invoice INV-00004 is overdue", body: "Invoice to Bright Solutions for $5,000.00 was due Feb 8", channel: "in_app" },
-      { organizationId: org.id, userId, type: "payment_received", title: "Payment received from Acme Corp", body: "Payment of $15,000.00 received for INV-00001", channel: "in_app", readAt: new Date() },
+      { organizationId: org.id, userId, type: "invoice_overdue", title: "Invoice INV-00004 is overdue", body: "Invoice to Bright Solutions for ₹5,000.00 was due Feb 8", channel: "in_app" },
+      { organizationId: org.id, userId, type: "payment_received", title: "Payment received from Acme Corp", body: "Payment of ₹15,000.00 received for INV-00001", channel: "in_app", readAt: new Date() },
       { organizationId: org.id, userId, type: "inventory_low", title: "Low stock: Noise Cancelling Headphones", body: "Only 5 units remaining (reorder point: 8)", channel: "in_app" },
       { organizationId: org.id, userId, type: "payroll_due", title: "Payroll run due in 3 days", body: "March 2026 payroll needs to be processed by March 15", channel: "in_app" },
       { organizationId: org.id, userId, type: "task_assigned", title: "Task assigned: Build contact page", body: "You were assigned to 'Build contact page' in Website Redesign", channel: "in_app", readAt: new Date() },
       { organizationId: org.id, userId, type: "system_alert", title: "Bank sync completed", body: "17 new transactions imported from Business Checking", channel: "in_app", readAt: new Date() },
-      { organizationId: org.id, userId, type: "approval_needed", title: "Expense claim needs approval", body: "Software Subscriptions claim for $159.00 submitted", channel: "in_app" },
+      { organizationId: org.id, userId, type: "approval_needed", title: "Expense claim needs approval", body: "Software Subscriptions claim for ₹159.00 submitted", channel: "in_app" },
     ]);
     console.log("  7 notifications");
   }
@@ -2325,7 +2325,7 @@ async function seed() {
         billId: b.id,
         contactId: b.contactId,
         amount: b.amountDue,
-        currencyCode: "USD",
+        currencyCode: "INR",
         scheduledDate: b.dueDate,
         status: "pending",
         notes: `Scheduled payment for ${b.billNumber}`,
@@ -2345,7 +2345,7 @@ async function seed() {
       defaultTaxRate: 2200,
       overtimeThresholdHours: 40,
       overtimeMultiplier: 1.5,
-      defaultCurrency: "USD",
+      defaultCurrency: "INR",
       salaryExpenseAccountCode: "5100",
       taxPayableAccountCode: "2200",
       bankAccountCode: "1100",
@@ -2425,12 +2425,13 @@ async function seed() {
   if (!existingFx) {
     console.log("Creating exchange rates...");
     const fxData = [
-      { base: "USD", target: "EUR", rate: 92000, date: "2026-03-01" },
-      { base: "USD", target: "GBP", rate: 79000, date: "2026-03-01" },
-      { base: "USD", target: "JPY", rate: 150200, date: "2026-03-01" },
-      { base: "USD", target: "CAD", rate: 136500, date: "2026-03-01" },
-      { base: "USD", target: "AUD", rate: 154800, date: "2026-03-01" },
-      { base: "USD", target: "CHF", rate: 88500, date: "2026-03-01" },
+      { base: "INR", target: "EUR", rate: 9228, date: "2026-03-01" },
+      { base: "INR", target: "GBP", rate: 8161, date: "2026-03-01" },
+      { base: "INR", target: "JPY", rate: 1727357, date: "2026-03-01" },
+      { base: "INR", target: "CAD", rate: 15074, date: "2026-03-01" },
+      { base: "INR", target: "AUD", rate: 16550, date: "2026-03-01" },
+      { base: "INR", target: "CHF", rate: 9850, date: "2026-03-01" },
+      { base: "INR", target: "USD", rate: 12000, date: "2026-03-01" },
     ];
     for (const fx of fxData) {
       await db.insert(exchangeRate).values({

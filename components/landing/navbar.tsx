@@ -50,7 +50,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2.5 group">
             <Logo />
             <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              dubbl
+              Pixel Marketing
             </span>
           </Link>
 
@@ -108,7 +108,7 @@ export function Navbar() {
                   <div className="flex items-center gap-2.5 px-6 pt-6 pb-4">
                     <Logo />
                     <SheetTitle className="text-[15px] font-semibold tracking-tight">
-                      dubbl
+                      Pixel Marketing
                     </SheetTitle>
                   </div>
 

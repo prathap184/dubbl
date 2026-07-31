@@ -39,7 +39,7 @@ export async function syncSystemAccounts(
       .from(organization)
       .where(eq(organization.id, orgId))
       .limit(1);
-    currencyCode = currencyCode ?? org?.defaultCurrency ?? "USD";
+    currencyCode = currencyCode ?? org?.defaultCurrency ?? "INR";
     countryCode = countryCode ?? org?.countryCode ?? undefined;
   }
 

@@ -30,6 +30,13 @@ function getFilingTabs(countryCode: string | null) {
     );
   }
 
+  if (countryCode === "IN") {
+    tabs.push(
+      { href: "/tax/gstr-1", label: "GSTR-1", icon: FileSpreadsheet },
+      { href: "/tax/gstr-3b", label: "GSTR-3B", icon: FileSpreadsheet },
+    );
+  }
+
   return tabs;
 }
 

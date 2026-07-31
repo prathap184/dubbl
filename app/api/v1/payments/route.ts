@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const currencyCode = providedCurrency ?? docCurrency ?? "USD";
+    const currencyCode = providedCurrency ?? docCurrency ?? "INR";
 
     // Generate payment number
     const paymentNumber = await getNextNumber(ctx.organizationId, "payment", "payment_number", "PAY");

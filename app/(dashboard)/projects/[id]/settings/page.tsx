@@ -188,9 +188,9 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Budget</Label><CurrencyInput prefix="$" value={projBudget} onChange={setProjBudget} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Hourly Rate</Label><CurrencyInput prefix="$" value={projHourlyRate} onChange={setProjHourlyRate} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Fixed Price</Label><CurrencyInput prefix="$" value={projFixedPrice} onChange={setProjFixedPrice} /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Budget</Label><CurrencyInput value={projBudget} onChange={setProjBudget} /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Hourly Rate</Label><CurrencyInput value={projHourlyRate} onChange={setProjHourlyRate} /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Fixed Price</Label><CurrencyInput value={projFixedPrice} onChange={setProjFixedPrice} /></div>
         </div>
       </Section>
 

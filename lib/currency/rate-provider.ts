@@ -109,7 +109,7 @@ function openExchangeRatesProvider(appId: string): RateProvider {
       };
       return {
         date: unixToIsoDate(data.timestamp),
-        base: data.base ?? "USD",
+        base: data.base ?? "INR",
         rates: data.rates ?? {},
       };
     },

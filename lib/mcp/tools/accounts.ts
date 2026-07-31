@@ -144,7 +144,7 @@ export function registerAccountTools(server: McpServer, ctx: AuthContext) {
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
+        .default("INR")
         .describe("Currency code (default: USD)"),
       description: z.string().optional().describe("Account description"),
       defaultTaxRateId: z

@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       .values({
         organizationId: ctx.organizationId,
         name: parsed.name,
-        currencyCode: parsed.currencyCode ?? "USD",
+        currencyCode: parsed.currencyCode ?? "INR",
         isActive: parsed.isActive ?? true,
         effectiveFrom: parsed.effectiveFrom ?? null,
         effectiveTo: parsed.effectiveTo ?? null,

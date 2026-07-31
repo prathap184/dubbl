@@ -65,7 +65,7 @@ export async function GET(request: Request) {
         where: eq(organization.id, ctx.organizationId),
         columns: { defaultCurrency: true },
       });
-      const currency = org?.defaultCurrency || "USD";
+      const currency = org?.defaultCurrency || "INR";
       const statement = buildStatement(cf, operating, investing, financing, currency);
 
       const { toPdf, toXlsx } = await import("@/lib/reports/statement-export");

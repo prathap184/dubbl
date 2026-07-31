@@ -24,7 +24,7 @@ const createSchema = z.object({
   hourlyRate: z.number().int().min(0).default(0),
   fixedPrice: z.number().int().min(0).default(0),
   estimatedHours: z.number().int().min(0).default(0),
-  currency: currencyCodeSchema.default("USD"),
+  currency: currencyCodeSchema.default("INR"),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
   category: z.string().nullable().optional(),

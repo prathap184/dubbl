@@ -38,7 +38,7 @@ const createSchema = z.object({
   expiryDate: z.string().min(1),
   reference: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   // Default price list applied to inventory-item lines that don't carry their own.
   priceListId: z.string().nullable().optional(),
   lines: z.array(lineSchema).min(1),

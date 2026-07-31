@@ -6,7 +6,7 @@ import { isValidCurrencyCode } from "./iso4217";
  * Trims, upper-cases, and validates against the active currency set so a
  * typo or unknown code is rejected at the API boundary rather than stored.
  *
- * Chain `.default("USD")`, `.optional()`, or `.nullable()` as the field needs.
+ * Chain `.default("INR")`, `.optional()`, or `.nullable()` as the field needs.
  */
 export const currencyCodeSchema = z
   .string()

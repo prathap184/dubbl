@@ -24,8 +24,10 @@ import {
   toBaseLines,
   assertBaseRateAvailable,
   ensureControlAccount,
+  autoReconcilePayment,
 } from "@/lib/api/journal-automation";
 import { ensureBankLedgerAccount } from "@/lib/api/bank-ledger";
+import { autoSweepCustomerCredits } from "@/lib/api/auto-sweep";
 import { z } from "zod";
 
 // A customer credit holds money received in advance of (or in excess of) an
@@ -236,6 +238,25 @@ export async function POST(request: Request) {
           createdBy: ctx.userId,
         })
         .returning();
+
+      if (parsed.bankAccountId && cashAccountId) {
+        await autoReconcilePayment(
+          { organizationId: ctx.organizationId, userId: ctx.userId },
+          tx,
+          cashAccountId,
+          entry,
+          parsed.amount,
+          currencyCode
+        );
+      }
+
+      await autoSweepCustomerCredits(
+        { organizationId: ctx.organizationId, userId: ctx.userId },
+        tx,
+        parsed.contactId,
+        currencyCode,
+        parsed.date
+      );
 
       return row;
     });

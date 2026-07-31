@@ -269,7 +269,7 @@ export function registerPaymentTools(server: McpServer, ctx: AuthContext) {
             "Payment currency must match the settled documents' currency"
           );
         }
-        const currencyCode = providedCurrency ?? docCurrency ?? "USD";
+        const currencyCode = providedCurrency ?? docCurrency ?? "INR";
 
         // Generate payment number
         const paymentNumber = await getNextNumber(

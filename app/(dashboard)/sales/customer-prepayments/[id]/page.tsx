@@ -198,7 +198,6 @@ export default function CustomerPrepaymentDetailPage() {
                 <div className="space-y-2">
                   <Label>Amount</Label>
                   <CurrencyInput
-                    prefix="$"
                     value={applyAmount}
                     onChange={setApplyAmount}
                     placeholder={minorUnitsToDecimal(cc.amountRemaining, cc.currencyCode)}

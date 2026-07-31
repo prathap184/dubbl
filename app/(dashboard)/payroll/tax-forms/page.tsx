@@ -44,7 +44,7 @@ interface TaxGeneration {
 }
 
 const formatMoney = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "INR" });
 
 const statusBadge = (status: string) => {
   switch (status) {

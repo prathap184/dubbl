@@ -59,6 +59,9 @@ export async function POST(
         issueDate: found.issueDate,
         currencyCode: found.currencyCode,
         taxTotal: found.taxTotal,
+        cgstTotal: found.cgstTotal ?? undefined,
+        sgstTotal: found.sgstTotal ?? undefined,
+        igstTotal: found.igstTotal ?? undefined,
         total: found.total,
         lines: found.lines.map((l) => ({
           id: l.id,

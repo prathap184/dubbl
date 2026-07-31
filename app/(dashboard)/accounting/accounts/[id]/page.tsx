@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
+import { minorUnitsToDecimal, formatMoney } from "@/lib/money";
 
 interface LedgerEntry {
   entryId: string;
@@ -58,21 +59,27 @@ const ledgerColumns: Column<LedgerEntry>[] = [
     key: "debit",
     header: "Debit",
     className: "w-28 text-right",
-    render: (r) => (
-      <span className="font-mono text-sm tabular-nums">
-        {parseFloat(r.debitAmount) > 0 ? parseFloat(r.debitAmount).toFixed(2) : ""}
-      </span>
-    ),
+    render: (r) => {
+      const val = parseInt(r.debitAmount);
+      return (
+        <span className="font-mono text-sm tabular-nums">
+          {val > 0 ? minorUnitsToDecimal(val) : ""}
+        </span>
+      );
+    },
   },
   {
     key: "credit",
     header: "Credit",
     className: "w-28 text-right",
-    render: (r) => (
-      <span className="font-mono text-sm tabular-nums">
-        {parseFloat(r.creditAmount) > 0 ? parseFloat(r.creditAmount).toFixed(2) : ""}
-      </span>
-    ),
+    render: (r) => {
+      const val = parseInt(r.creditAmount);
+      return (
+        <span className="font-mono text-sm tabular-nums">
+          {val > 0 ? minorUnitsToDecimal(val) : ""}
+        </span>
+      );
+    },
   },
   {
     key: "balance",
@@ -80,7 +87,7 @@ const ledgerColumns: Column<LedgerEntry>[] = [
     className: "w-28 text-right",
     render: (r) => (
       <span className="font-mono text-sm font-medium tabular-nums">
-        {parseFloat(r.balance).toFixed(2)}
+        {minorUnitsToDecimal(parseInt(r.balance))}
       </span>
     ),
   },

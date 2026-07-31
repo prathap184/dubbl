@@ -289,7 +289,7 @@ function EditPODrawer({
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Unit Price *</Label>
-                        <CurrencyInput prefix="$" value={line.unitPrice} onChange={(v) => updateLine(index, { unitPrice: v })} />
+                        <CurrencyInput value={line.unitPrice} onChange={(v) => updateLine(index, { unitPrice: v })} />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">Account</Label>

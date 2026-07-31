@@ -21,6 +21,8 @@ import {
   assertBaseRateAvailable,
   ensureControlAccount,
   createCogsJournalEntry,
+  ensureAccountByCode,
+  autoReconcilePayment,
 } from "@/lib/api/journal-automation";
 import { ensureBankLedgerAccount } from "@/lib/api/bank-ledger";
 
@@ -143,11 +145,28 @@ export async function POST(
       const lines: (typeof journalLine.$inferInsert)[] = [];
 
       // CR Revenue per line (net amount).
+      let fallbackSalesAccount: { id: string } | null | undefined = null;
       for (const line of found.lines) {
-        if (line.accountId && line.amount > 0) {
+        if (line.amount > 0) {
+          let actId = line.accountId;
+          if (!actId) {
+            if (!fallbackSalesAccount) {
+              fallbackSalesAccount = await ensureAccountByCode(
+                ctx.organizationId,
+                { code: "4000", name: "Sales", type: "revenue" },
+                base,
+                tx
+              );
+            }
+            actId = fallbackSalesAccount?.id || null;
+          }
+          if (!actId) {
+            throw new Error(`Missing accountId for sales receipt line and could not resolve fallback Sales account.`);
+          }
+
           lines.push({
             journalEntryId: entry.id,
-            accountId: line.accountId,
+            accountId: actId,
             description: `Sales receipt ${found.receiptNumber}`,
             debitAmount: 0,
             creditAmount: line.amount,
@@ -187,6 +206,17 @@ export async function POST(
           creditAmount: 0,
         });
         await tx.insert(journalLine).values(toBaseLines(lines, currency, rate));
+
+        // Automatically create a reconciled bank transaction so the user sees the
+        // funds instantly in their banking tab without double statement updates.
+        await autoReconcilePayment(
+          { organizationId: ctx.organizationId, userId: ctx.userId },
+          tx,
+          cashAccountId!,
+          entry,
+          cashTotal,
+          found.currencyCode
+        );
       }
 
       // Cost of goods sold: relieve inventory + post COGS for any stock lines.

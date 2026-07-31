@@ -65,7 +65,7 @@ export async function getOrgTaxConfig(organizationId: string): Promise<OrgTaxCon
   });
   const scheme = org?.vatScheme === "cash" ? "cash" : "accrual";
   return {
-    baseCurrency: org?.defaultCurrency ?? "USD",
+    baseCurrency: org?.defaultCurrency ?? "INR",
     vatScheme: scheme,
     taxRegime: org?.taxRegime ?? null,
     country: org?.countryCode ?? org?.country ?? null,

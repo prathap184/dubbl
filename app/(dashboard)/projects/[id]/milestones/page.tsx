@@ -347,7 +347,7 @@ export default function MilestonesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Amount</Label>
-                  <CurrencyInput prefix="$" value={amount} onChange={setAmount} />
+                  <CurrencyInput value={amount} onChange={setAmount} />
                 </div>
               </div>
             </div>
@@ -478,7 +478,7 @@ export default function MilestonesPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Amount</Label>
-                  <CurrencyInput prefix="$" value={assignAmount} onChange={setAssignAmount} />
+                  <CurrencyInput value={assignAmount} onChange={setAssignAmount} />
                 </div>
                 <div className="space-y-2">
                   <Label>Description</Label>

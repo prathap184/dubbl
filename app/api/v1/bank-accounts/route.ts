@@ -16,7 +16,7 @@ const createSchema = z.object({
   accountName: z.string().min(1),
   accountNumber: z.string().nullable().optional(),
   bankName: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   countryCode: z.string().length(2).nullable().optional(),
   accountType: z
     .enum(["checking", "savings", "credit_card", "cash", "loan", "investment", "other"])

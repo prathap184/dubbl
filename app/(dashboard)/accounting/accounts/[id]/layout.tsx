@@ -119,7 +119,7 @@ export default function AccountDetailLayout({ children }: { children: React.Reac
   }
 
   const bal = parseFloat(account.balance || "0");
-  const cur = account.currencyCode || "USD";
+  const cur = account.currencyCode || "INR";
   const typeConfig = TYPE_CONFIG[account.type];
   const totalDebits = account.totalDebits || 0;
   const totalCredits = account.totalCredits || 0;
@@ -171,7 +171,7 @@ export default function AccountDetailLayout({ children }: { children: React.Reac
           <div>
             <p className="text-[11px] text-muted-foreground">Balance</p>
             <p className="mt-0.5 font-mono text-xl font-semibold tabular-nums">
-              {formatMoney(Math.round(bal * 100), cur)}
+              {formatMoney(Math.round(bal), cur)}
             </p>
           </div>
           <div>
@@ -180,7 +180,7 @@ export default function AccountDetailLayout({ children }: { children: React.Reac
               Total Debits
             </p>
             <p className="mt-0.5 font-mono text-lg font-semibold tabular-nums text-emerald-600">
-              {totalDebits > 0 ? formatMoney(Math.round(totalDebits * 100), cur) : "-"}
+              {totalDebits > 0 ? formatMoney(Math.round(totalDebits), cur) : "-"}
             </p>
           </div>
           <div>
@@ -189,7 +189,7 @@ export default function AccountDetailLayout({ children }: { children: React.Reac
               Total Credits
             </p>
             <p className="mt-0.5 font-mono text-lg font-semibold tabular-nums text-red-600">
-              {totalCredits > 0 ? formatMoney(Math.round(totalCredits * 100), cur) : "-"}
+              {totalCredits > 0 ? formatMoney(Math.round(totalCredits), cur) : "-"}
             </p>
           </div>
           <div>

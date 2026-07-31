@@ -474,7 +474,6 @@ export default function InventoryItemLayout({ children }: { children: React.Reac
               <div className="space-y-2">
                 <Label>How much to write off</Label>
                 <CurrencyInput
-                  prefix="$"
                   value={writeDownAmount}
                   onChange={setWriteDownAmount}
                 />

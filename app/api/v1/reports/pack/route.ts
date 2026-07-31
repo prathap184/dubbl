@@ -250,7 +250,7 @@ export async function GET(request: Request) {
       where: eq(organization.id, ctx.organizationId),
       columns: { defaultCurrency: true },
     });
-    const currency = org?.defaultCurrency || "USD";
+    const currency = org?.defaultCurrency || "INR";
 
     const totalRevenue = sumBalances(pl.filter((a) => a.type === "revenue"));
     const totalExpenses = sumBalances(pl.filter((a) => a.type === "expense"));

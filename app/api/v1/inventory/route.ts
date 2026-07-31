@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { inventoryItem, journalEntry, journalLine } from "@/lib/db/schema";
+import { inventoryItem, journalEntry, journalLine, hsnMaster, hsnGstRates } from "@/lib/db/schema";
 import { eq, and, or, ilike, desc, asc, sql } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { requireRole } from "@/lib/api/require-role";
@@ -32,6 +32,10 @@ const createSchema = z.object({
   quantityOnHand: z.number().int().default(0),
   reorderPoint: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
+  hsnCode: z.string().nullable().optional(),
+  gstRate: z.number().int().nullable().optional(),
+  workflowSteps: z.array(z.any()).optional().default([]),
+  metadata: z.record(z.string(), z.any()).optional().default({}),
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,11 +168,29 @@ export async function POST(request: Request) {
       // valuation path so averageCost / totalValue / FIFO layers are set. Storing
       // a quantity without a cost (the old behaviour) left stock at $0, so every
       // later sale posted $0 COGS and overstated profit.
+      let finalGstRate = parsed.gstRate;
+      if (parsed.hsnCode && typeof finalGstRate !== "number") {
+        const hsn = await tx.query.hsnMaster.findFirst({
+          where: eq(hsnMaster.hsnCode, parsed.hsnCode),
+        });
+        if (hsn) {
+          const rateRec = await tx.query.hsnGstRates.findFirst({
+            where: eq(hsnGstRates.hsnId, hsn.id),
+            orderBy: desc(hsnGstRates.effectiveFrom),
+          });
+          if (rateRec) {
+            finalGstRate = rateRec.gstRate;
+          }
+        }
+      }
+
       const [item] = await tx
         .insert(inventoryItem)
         .values({
           organizationId: ctx.organizationId,
           ...parsed,
+          gstRate: finalGstRate,
+          sku: parsed.sku || parsed.code,
           quantityOnHand: 0,
           averageCost: 0,
           totalValue: 0,
@@ -231,6 +253,13 @@ export async function POST(request: Request) {
     });
 
     logAudit({ ctx, action: "create", entityType: "inventory_item", entityId: created.id, request });
+
+    // Notify Pixel Marketing (precision-press-erp) to invalidate its products cache
+    fetch("http://localhost:3000/api/cache/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "products" }),
+    }).catch(err => console.error("Failed to revalidate Pixel Marketing cache:", err));
 
     return NextResponse.json({ inventoryItem: created }, { status: 201 });
   } catch (err) {

@@ -30,7 +30,7 @@ export const priceList = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     // ISO currency code the prices in this list are denominated in.
-    currencyCode: text("currency_code").notNull().default("USD"),
+    currencyCode: text("currency_code").notNull().default("INR"),
     isActive: boolean("is_active").notNull().default(true),
     // Optional validity window (inclusive). Null = unbounded on that side.
     effectiveFrom: date("effective_from"),

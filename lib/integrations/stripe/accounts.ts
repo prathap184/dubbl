@@ -33,7 +33,7 @@ export async function ensureStripeAccounts(organizationId: string, exec: DbOrTx 
     where: eq(organization.id, organizationId),
     columns: { defaultCurrency: true },
   });
-  const base = org?.defaultCurrency ?? "USD";
+  const base = org?.defaultCurrency ?? "INR";
 
   // Sequential (not Promise.all) so this is safe when exec is an open transaction.
   const clearing = await ensureAccountByCode(organizationId, STRIPE_ACCOUNTS.clearing, base, exec);

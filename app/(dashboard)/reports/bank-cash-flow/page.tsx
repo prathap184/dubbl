@@ -108,7 +108,7 @@ export default function BankCashFlowPage() {
   const totals = data?.totals ?? { inflows: 0, outflows: 0, net: 0 };
   // Currency of the chosen account, or the first account as a sensible default.
   const selected = accounts.find((a) => a.id === bankAccountId);
-  const currency = selected?.currencyCode || accounts[0]?.currencyCode || "USD";
+  const currency = selected?.currencyCode || accounts[0]?.currencyCode || "INR";
 
   return (
     <ContentReveal className="space-y-6">

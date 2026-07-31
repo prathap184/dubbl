@@ -32,7 +32,7 @@ export default function AccountSettingsPage() {
 
   if (!account) return null;
 
-  const cur = account.currencyCode || "USD";
+  const cur = account.currencyCode || "INR";
   const isSystem = account.isSystem === true;
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {

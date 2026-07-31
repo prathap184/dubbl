@@ -454,8 +454,7 @@ export default function TaxLiabilitiesPage() {
               <CurrencyInput
                 value={formAmount}
                 onChange={setFormAmount}
-                prefix="$"
-              />
+                />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

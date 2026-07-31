@@ -257,7 +257,7 @@ export default function ImportExportPage() {
         });
         if (!res.ok) throw new Error("Export failed");
         const blob = await res.blob();
-        downloadBlob(blob, "dubbl-export.zip");
+        downloadBlob(blob, "Pixel Marketing-export.zip");
       } else {
         const key = entities[0];
         const params = new URLSearchParams();
@@ -304,7 +304,7 @@ export default function ImportExportPage() {
           <div>
             <h2 className="text-lg font-semibold">Import & Export</h2>
             <p className="text-sm text-muted-foreground">
-              Migrate data from other bookkeeping tools or export your Dubbl data
+              Migrate data from other bookkeeping tools or export your Pixel Marketing data
             </p>
           </div>
         </div>

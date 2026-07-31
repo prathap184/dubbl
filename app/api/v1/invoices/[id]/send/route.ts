@@ -11,6 +11,7 @@ import { createInvoiceJournalEntry, createCogsJournalEntry, assertBaseRateAvaila
 import { buildSenderSnapshot, buildRecipientSnapshot } from "@/lib/documents/snapshots";
 import { sendDocumentEmail } from "@/lib/email/document-sender";
 import { renderDocumentEmailHtml } from "@/lib/email/render-document-email";
+import { autoSweepCustomerCredits } from "@/lib/api/auto-sweep";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 
@@ -44,6 +45,8 @@ export async function POST(
     const { id } = await params;
     const ctx = await getAuthContext(request);
     requireRole(ctx, "approve:invoices");
+
+    console.log("Send Invoice API called with ID:", id, "Org ID:", ctx.organizationId);
 
     const found = await db.query.invoice.findFirst({
       where: and(
@@ -107,7 +110,7 @@ export async function POST(
               invoiceNumber: found.invoiceNumber,
               issueDate: found.issueDate,
               dueDate: found.dueDate,
-              currencyCode: "USD",
+              currencyCode: "INR",
               lines: found.lines.map((l) => ({
                 description: l.description,
                 quantity: l.quantity,
@@ -170,6 +173,9 @@ export async function POST(
           invoiceNumber: found.invoiceNumber,
           total: found.total,
           taxTotal: found.taxTotal,
+          cgstTotal: found.cgstTotal,
+          sgstTotal: found.sgstTotal,
+          igstTotal: found.igstTotal,
           subtotal: found.subtotal,
           lines: found.lines.map((l) => ({
             accountId: l.accountId,
@@ -212,6 +218,17 @@ export async function POST(
         })
         .where(eq(invoice.id, id))
         .returning();
+
+      if (found.contactId) {
+        await autoSweepCustomerCredits(
+          { organizationId: ctx.organizationId, userId: ctx.userId },
+          tx,
+          found.contactId,
+          found.currencyCode,
+          found.issueDate
+        );
+      }
+
       return row;
     });
 

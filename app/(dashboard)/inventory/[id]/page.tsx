@@ -25,6 +25,7 @@ import { setEntityTitle } from "@/lib/hooks/use-entity-title";
 import { CategoryPicker } from "@/components/dashboard/category-picker";
 import { useInventoryItem } from "./layout";
 import JsBarcode from "jsbarcode";
+import { WorkflowBuilder } from "@/components/inventory/workflow-builder";
 
 interface WarehouseStockEntry {
   id: string;
@@ -43,6 +44,8 @@ export default function InventoryItemDetailsPage() {
   const [categoryId, setCategoryId] = useState(item.categoryId || "");
   const [invPurchasePrice, setInvPurchasePrice] = useState(centsToDecimal(item.purchasePrice));
   const [invSalePrice, setInvSalePrice] = useState(centsToDecimal(item.salePrice));
+  const [metadata, setMetadata] = useState<any>((item as any).metadata || {});
+  const [workflowSteps, setWorkflowSteps] = useState<any[]>((item as any).workflowSteps || []);
   const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStockEntry[]>([]);
   // "Revalue stock" sheet: set the book value directly (mark-to-market) without
   // changing the count.
@@ -64,6 +67,16 @@ export default function InventoryItemDetailsPage() {
       .then((r) => r.json())
       .then((data) => setWarehouseStocks(data.data || []));
   }, [id, orgId]);
+
+  const updateMetadata = (category: string, key: string, value: any) => {
+    setMetadata((prev: any) => ({
+      ...prev,
+      [category]: {
+        ...(prev[category] || {}),
+        [key]: value,
+      },
+    }));
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,6 +100,8 @@ export default function InventoryItemDetailsPage() {
           purchasePrice: Math.round(parseFloat(invPurchasePrice || "0") * 100),
           salePrice: Math.round(parseFloat(invSalePrice || "0") * 100),
           reorderPoint: parseInt(form.get("reorderPoint") as string) || 0,
+          metadata,
+          workflowSteps,
         }),
       });
 
@@ -260,7 +275,6 @@ export default function InventoryItemDetailsPage() {
               <Label className="text-xs" htmlFor="purchasePrice">What it costs you</Label>
               <CurrencyInput
                 id="purchasePrice"
-                prefix="$"
                 value={invPurchasePrice}
                 onChange={setInvPurchasePrice}
               />
@@ -269,7 +283,6 @@ export default function InventoryItemDetailsPage() {
               <Label className="text-xs" htmlFor="salePrice">What you sell it for</Label>
               <CurrencyInput
                 id="salePrice"
-                prefix="$"
                 value={invSalePrice}
                 onChange={setInvSalePrice}
               />
@@ -304,6 +317,114 @@ export default function InventoryItemDetailsPage() {
             rows={3}
             placeholder="Item description..."
           />
+        </Section>
+
+        <div className="h-px bg-border" />
+
+        <Section title="ERP Specifications" description="Product specs like width, GSM.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Max Width</Label>
+              <Input
+                value={metadata?.specs?.maxWidth || ""}
+                onChange={(e) => updateMetadata("specs", "maxWidth", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">GSM</Label>
+              <Input
+                value={metadata?.specs?.gsm || ""}
+                onChange={(e) => updateMetadata("specs", "gsm", e.target.value)}
+              />
+            </div>
+          </div>
+        </Section>
+
+        <div className="h-px bg-border" />
+
+        <Section title="Eyelet & Delivery Pricing" description="Pricing for finishings and delivery.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Eyelet - Metal (₹)</Label>
+              <Input
+                type="number"
+                value={metadata?.eyeletPricing?.metal || ""}
+                onChange={(e) => updateMetadata("eyeletPricing", "metal", Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Eyelet - Plastic (₹)</Label>
+              <Input
+                type="number"
+                value={metadata?.eyeletPricing?.plastic || ""}
+                onChange={(e) => updateMetadata("eyeletPricing", "plastic", Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Delivery - Door (₹)</Label>
+              <Input
+                type="number"
+                value={metadata?.deliveryPricing?.door || ""}
+                onChange={(e) => updateMetadata("deliveryPricing", "door", Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Delivery - Courier (₹)</Label>
+              <Input
+                type="number"
+                value={metadata?.deliveryPricing?.courier || ""}
+                onChange={(e) => updateMetadata("deliveryPricing", "courier", Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Delivery - Transport (₹)</Label>
+              <Input
+                type="number"
+                value={metadata?.deliveryPricing?.transport || ""}
+                onChange={(e) => updateMetadata("deliveryPricing", "transport", Number(e.target.value))}
+              />
+            </div>
+          </div>
+        </Section>
+        
+        <div className="h-px bg-border" />
+
+        <Section title="Media Assets" description="Links to external videos and images.">
+          <div className="grid gap-4 sm:grid-cols-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Video URL</Label>
+              <Input
+                value={metadata?.media?.video?.url || ""}
+                onChange={(e) => {
+                  setMetadata((prev: any) => ({
+                    ...prev,
+                    media: {
+                      ...(prev?.media || {}),
+                      video: { url: e.target.value }
+                    }
+                  }))
+                }}
+                placeholder="https://youtube.com/..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Images (Comma-separated URLs)</Label>
+              <Textarea
+                rows={2}
+                value={(metadata?.media?.images || []).join(", ")}
+                onChange={(e) => updateMetadata("media", "images", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
+                placeholder="https://..., https://..."
+              />
+            </div>
+          </div>
+        </Section>
+
+        <div className="h-px bg-border" />
+
+        <Section title="Workflow Steps" description="Define the production stages.">
+          <div className="space-y-3">
+            <WorkflowBuilder steps={workflowSteps} onChange={setWorkflowSteps} />
+          </div>
         </Section>
 
         <div className="flex justify-end">
@@ -439,7 +560,6 @@ export default function InventoryItemDetailsPage() {
             <div className="space-y-2">
               <Label>New value</Label>
               <CurrencyInput
-                prefix="$"
                 value={revalueValue}
                 onChange={setRevalueValue}
               />

@@ -57,13 +57,14 @@ export function ContactPicker({ value, onChange, type, placeholder = "Select con
   const fetchedRef = useRef(false);
   const { open: openDrawer } = useCreateDrawer();
 
-  // Fetch contacts when popover opens for the first time
+  // Fetch contacts on mount so a pre-filled value can display the contact name
+  // immediately. The popover open/close state no longer gates the initial load.
   useEffect(() => {
-    if (!open || fetchedRef.current) return;
+    if (fetchedRef.current) return;
     fetchedRef.current = true;
 
     const orgId = localStorage.getItem("activeOrgId");
-    if (!orgId) return;
+    if (!orgId) { setLoading(false); return; }
 
     const params = new URLSearchParams({ limit: "200" });
     if (type) params.set("type", type);
@@ -76,7 +77,8 @@ export function ContactPicker({ value, onChange, type, placeholder = "Select con
         if (data.data) setContacts(data.data);
       })
       .finally(() => setLoading(false));
-  }, [open, type]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selected = contacts.find((c) => c.id === value);
 

@@ -36,7 +36,7 @@ export async function toBaseAmounts(
       where: eq(organization.id, orgId),
       columns: { defaultCurrency: true },
     });
-    baseCurrency = org?.defaultCurrency ?? "USD";
+    baseCurrency = org?.defaultCurrency ?? "INR";
   }
 
   const status = await getRateStatus(orgId, currencyCode, baseCurrency, date);

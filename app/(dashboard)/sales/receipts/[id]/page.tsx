@@ -50,6 +50,7 @@ export default function SalesReceiptDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [sr, setSr] = useState<SalesReceiptDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
 
   const orgId = typeof window !== "undefined" ? localStorage.getItem("activeOrgId") : null;
 
@@ -73,12 +74,40 @@ export default function SalesReceiptDetailPage() {
   const paidInto = sr.bankAccount?.accountName
     || (sr.depositAccount ? `${sr.depositAccount.code} · ${sr.depositAccount.name}` : null);
 
+  async function handlePost() {
+    if (!orgId) return;
+    setPosting(true);
+    try {
+      const res = await fetch(`/api/v1/sales-receipts/${id}/post`, {
+        method: "POST",
+        headers: { "x-organization-id": orgId },
+      });
+      if (res.ok) {
+        setSr((prev) => prev ? { ...prev, status: "paid" } : prev);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to post receipt to ledger");
+      }
+    } catch (e) {
+      alert("Error posting receipt to ledger");
+    } finally {
+      setPosting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title={sr.receiptNumber} description={`Sold to: ${sr.contact?.name || "Unknown"}`}>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/sales/receipts"><ArrowLeft className="mr-2 size-4" />Back</Link>
-        </Button>
+        <div className="flex gap-2">
+          {sr.status === "draft" && (
+            <Button size="sm" onClick={handlePost} disabled={posting}>
+              {posting ? "Posting..." : "Post to Ledger"}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/sales/receipts"><ArrowLeft className="mr-2 size-4" />Back</Link>
+          </Button>
+        </div>
       </PageHeader>
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">

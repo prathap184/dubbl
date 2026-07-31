@@ -61,12 +61,19 @@ import { WarehousePicker } from "@/components/dashboard/warehouse-picker";
 import { CategoryPicker } from "@/components/dashboard/category-picker";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatMoney, decimalToCents, decimalToMinorUnits } from "@/lib/money";
+import { WorkflowBuilder, type WorkflowStep } from "@/components/inventory/workflow-builder";
+import { HsnPicker } from "@/components/inventory/hsn-picker";
+
 
 type DrawerType = "contact" | "project" | "invoice" | "bill" | "entry" | "inventory" | "quote" | "salesReceipt" | "purchaseOrder" | "expense" | "fixedAsset" | "budget" | "employee" | "creditNote" | "recurring" | "account" | "bankAccount" | "warehouse" | "stockTake" | "category" | "transfer" | "bankTransfer" | "contractor" | "deal" | "debitNote" | "customerCredit" | "loan" | "openingBalance" | "accrualSchedule" | "revenueSchedule" | "recurringJournal";
 
 interface DrawerInitialData {
   contactId?: string;
   contactName?: string;
+  reference?: string;
+  lines?: any[];
+  deliveryMode?: string;
+  deliveryAddress?: string;
 }
 
 interface CreateDrawerContextValue {
@@ -97,7 +104,7 @@ export function CreateDrawerProvider({ children }: { children: React.ReactNode }
       {children}
       <ContactDrawer open={activeType === "contact"} onClose={close} />
       <ProjectDrawer open={activeType === "project"} onClose={close} />
-      <InvoiceDrawer open={activeType === "invoice"} onClose={close} />
+      <InvoiceDrawer open={activeType === "invoice"} onClose={close} initialData={initialData} />
       <BillDrawer open={activeType === "bill"} onClose={close} />
       <EntryDrawer open={activeType === "entry"} onClose={close} />
       <InventoryDrawer open={activeType === "inventory"} onClose={close} />
@@ -180,6 +187,13 @@ function DrawerFooter({
 function ContactDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState("INR");
+
+  useEffect(() => {
+    if (!open) {
+      setCurrencyCode("INR");
+    }
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -200,6 +214,7 @@ function ContactDrawer({ open, onClose }: { open: boolean; onClose: () => void }
           type: form.get("type") || "customer",
           paymentTermsDays: parseInt(form.get("paymentTermsDays") as string) || 30,
           notes: form.get("notes") || null,
+          currencyCode,
         }),
       });
       if (!res.ok) {
@@ -270,9 +285,18 @@ function ContactDrawer({ open, onClose }: { open: boolean; onClose: () => void }
                   <Input id="drawer-contact-terms" name="paymentTermsDays" type="number" min={0} defaultValue={30} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="drawer-contact-tax">Tax Number</Label>
-                <Input id="drawer-contact-tax" name="taxNumber" placeholder="Tax ID / VAT number" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="drawer-contact-tax">Tax Number</Label>
+                  <Input id="drawer-contact-tax" name="taxNumber" placeholder="Tax ID / VAT number" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Currency</Label>
+                  <CurrencySelect
+                    value={currencyCode}
+                    onValueChange={setCurrencyCode}
+                  />
+                </div>
               </div>
             </div>
 
@@ -457,17 +481,17 @@ function ProjectDrawer({ open, onClose }: { open: boolean; onClose: () => void }
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-project-budget">Budget</Label>
-                  <CurrencyInput id="drawer-project-budget" name="budget" prefix="$" value={projectBudget} onChange={setProjectBudget} />
+                  <CurrencyInput id="drawer-project-budget" name="budget" value={projectBudget} onChange={setProjectBudget} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-project-rate">Hourly Rate</Label>
-                  <CurrencyInput id="drawer-project-rate" name="hourlyRate" prefix="$" value={projectHourlyRate} onChange={setProjectHourlyRate} />
+                  <CurrencyInput id="drawer-project-rate" name="hourlyRate" value={projectHourlyRate} onChange={setProjectHourlyRate} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Fixed Price</Label>
-                  <CurrencyInput name="fixedPrice" prefix="$" value={projectFixedPrice} onChange={setProjectFixedPrice} />
+                  <CurrencyInput name="fixedPrice" value={projectFixedPrice} onChange={setProjectFixedPrice} />
                 </div>
                 <div className="space-y-2">
                   <Label>Estimated Hours</Label>
@@ -509,7 +533,7 @@ function ProjectDrawer({ open, onClose }: { open: boolean; onClose: () => void }
 // ---------------------------------------------------------------------------
 // Invoice Drawer
 // ---------------------------------------------------------------------------
-function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+function InvoiceDrawer({ open, onClose, initialData }: { open: boolean; onClose: () => void; initialData?: DrawerInitialData }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [contactId, setContactId] = useState("");
@@ -529,13 +553,22 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
   // sent straight away (created awaiting approval; the invoice's own page
   // carries the approve / reject lifecycle actions).
   const [forApproval, setForApproval] = useState(false);
+  const [deliveryMode, setDeliveryMode] = useState<string>("");
+  const [deliveryAddress, setDeliveryAddress] = useState<string>("");
   const [lines, setLines] = useState<LineItem[]>([
     { description: "", quantity: "1", unitPrice: "", accountId: "", taxRateId: "" },
   ]);
 
   useEffect(() => {
-    if (!open) {
+    if (open && initialData) {
+      if (initialData.reference) setReference(initialData.reference);
+      if (initialData.lines && initialData.lines.length > 0) setLines(initialData.lines);
+      if (initialData.contactId) setContactId(initialData.contactId);
+      if (initialData.deliveryMode) setDeliveryMode(initialData.deliveryMode);
+      if (initialData.deliveryAddress) setDeliveryAddress(initialData.deliveryAddress);
+    } else if (!open) {
       setContactId(""); setReference(""); setNotes("");
+      setDeliveryMode(""); setDeliveryAddress("");
       setIsDepositRetainer(false); setInvoiceType("deposit"); setDepositPercent("");
       setForApproval(false);
       setIssueDate(new Date().toISOString().split("T")[0]);
@@ -543,7 +576,7 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
       setDueDate(d.toISOString().split("T")[0]);
       setLines([{ description: "", quantity: "1", unitPrice: "", accountId: "", taxRateId: "" }]);
     }
-  }, [open]);
+  }, [open, initialData]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -566,7 +599,11 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
         body: JSON.stringify({
           contactId, issueDate, dueDate,
           reference: reference || null,
-          notes: notes || null,
+          notes: [
+            deliveryMode ? `Delivery Mode: ${deliveryMode}` : "",
+            deliveryAddress ? `Delivery Address: ${deliveryAddress}` : "",
+            notes
+          ].filter(Boolean).join("\n\n") || null,
           invoiceType: isDepositRetainer ? invoiceType : "standard",
           depositPercent: isDepositRetainer ? depositBasisPoints : null,
           ...(forApproval ? { submitForApproval: true } : {}),
@@ -576,6 +613,13 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
             taxRateId: l.taxRateId || null,
+            inventoryItemId: l.inventoryItemId || null,
+            width: parseFloat(l.width || "0") || null,
+            length: parseFloat(l.length || "0") || null,
+            sqFt: parseFloat(l.sqFt || "0") || null,
+            finishAmount: parseFloat(l.finishAmount || "0") || null,
+            deliveryMode: l.deliveryMode || null,
+            deliveryAmount: parseFloat(l.deliveryAmount || "0") || null,
           })),
         }),
       });
@@ -600,7 +644,7 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="sm:max-w-2xl w-full p-0 flex flex-col">
+      <SheetContent className="sm:max-w-[75vw] w-full p-0 flex flex-col">
         <SheetHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4 border-b space-y-3">
           <div className="flex items-center gap-3">
             <DrawerIcon><FileText className="size-5" /></DrawerIcon>
@@ -632,6 +676,24 @@ function InvoiceDrawer({ open, onClose }: { open: boolean; onClose: () => void }
                 <div className="space-y-2">
                   <Label>Due Date</Label>
                   <DatePicker value={dueDate} onChange={setDueDate} placeholder="Due date" />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Delivery Mode</Label>
+                  <Select value={deliveryMode} onValueChange={setDeliveryMode}>
+                    <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Select mode" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DOOR">Door</SelectItem>
+                      <SelectItem value="PICKUP">Pickup</SelectItem>
+                      <SelectItem value="COURIER">Courier</SelectItem>
+                      <SelectItem value="TRANSPORT">Transport</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Delivery Address</Label>
+                  <Input value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Full address" />
                 </div>
               </div>
               <label className="flex items-start gap-3 rounded-lg border bg-muted/30 px-3 py-3 cursor-pointer">
@@ -769,7 +831,7 @@ function BillDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -1011,8 +1073,38 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [categoryId, setCategoryId] = useState("");
+  const [code, setCode] = useState("");
+  const [sku, setSku] = useState("");
+  const [skuEdited, setSkuEdited] = useState(false);
+  const [isDirectSelling, setIsDirectSelling] = useState(false);
   const [invPurchasePrice, setInvPurchasePrice] = useState("0.00");
   const [invSalePrice, setInvSalePrice] = useState("0.00");
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
+    { id: "1", label: "Accounts Approval", role: "ACCOUNTANT", blocking: true },
+    { id: "2", label: "Design & Artwork", role: "DESIGNER", blocking: true },
+    { id: "3", label: "Manager Sign-Off", role: "MANAGER", blocking: true },
+    { id: "4", label: "Printing", role: "PRINTER", blocking: true },
+    { id: "5", label: "Pasting", role: "PASTING", blocking: true },
+    { id: "6", label: "Dispatch", role: "DISPATCH", blocking: true },
+    { id: "7", label: "Delivery", role: "DELIVERY", blocking: true }
+  ]);
+  const [hsnCode, setHsnCode] = useState("");
+  const [gstRate, setGstRate] = useState<number>(0);
+  const [hsnDescription, setHsnDescription] = useState("");
+  
+  const [eyeletMetal, setEyeletMetal] = useState("0");
+  const [eyeletPlastic, setEyeletPlastic] = useState("0");
+  const [eyeletNone, setEyeletNone] = useState("0");
+  
+  const [deliveryDoor, setDeliveryDoor] = useState("0");
+  const [deliveryCourier, setDeliveryCourier] = useState("0");
+  const [deliveryTransport, setDeliveryTransport] = useState("0");
+
+  const [specMaxWidth, setSpecMaxWidth] = useState("");
+  const [specGsm, setSpecGsm] = useState("");
+
+  const [mediaImages, setMediaImages] = useState("");
+  const [mediaVideo, setMediaVideo] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1035,7 +1127,30 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
           salePrice: Math.round(parseFloat(form.get("salePrice") as string || "0") * 100),
           quantityOnHand: parseInt(form.get("quantityOnHand") as string) || 0,
           reorderPoint: parseInt(form.get("reorderPoint") as string) || 0,
-        }),
+          hsnCode: form.get("hsnCode") || null,
+          gstRate: parseInt(form.get("gstRate") as string) || 0,
+          workflowSteps: workflowSteps,
+          metadata: {
+            isDirectSelling: isDirectSelling,
+            eyeletPricing: {
+              metal: parseFloat(eyeletMetal) || 0,
+              plastic: parseFloat(eyeletPlastic) || 0,
+              none: parseFloat(eyeletNone) || 0
+            },
+            deliveryPricing: {
+              door: parseFloat(deliveryDoor) || 0,
+              courier: parseFloat(deliveryCourier) || 0,
+              transport: parseFloat(deliveryTransport) || 0
+            },
+            specs: {
+              maxWidth: specMaxWidth,
+              gsm: specGsm
+            },
+            media: {
+              images: mediaImages.split(",").map(s => s.trim()).filter(Boolean),
+              video: mediaVideo
+            }
+          }        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -1067,11 +1182,27 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto space-y-6 px-4 py-4 sm:px-6 sm:py-5">
             <div className="space-y-4">
-              <SectionLabel>Item Info</SectionLabel>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <SectionLabel>Item Info</SectionLabel>
+                <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+                  <input type="checkbox" id="direct-selling" className="size-4 accent-blue-600 rounded" checked={isDirectSelling} onChange={(e) => setIsDirectSelling(e.target.checked)} />
+                  <Label htmlFor="direct-selling" className="text-blue-700 font-medium cursor-pointer m-0">Direct Selling Product (No dimensions)</Label>
+                </div>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-inv-code">Code *</Label>
-                  <Input id="drawer-inv-code" name="code" required placeholder="ITEM-001" />
+                  <Input 
+                    id="drawer-inv-code" 
+                    name="code" 
+                    required 
+                    placeholder="ITEM-001"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value);
+                      if (!skuEdited) setSku(e.target.value);
+                    }}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-inv-name">Name *</Label>
@@ -1085,7 +1216,72 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-inv-sku">SKU</Label>
-                  <Input id="drawer-inv-sku" name="sku" placeholder="Stock keeping unit" />
+                  <Input 
+                    id="drawer-inv-sku" 
+                    name="sku" 
+                    placeholder="Stock keeping unit"
+                    value={sku}
+                    onChange={(e) => {
+                      setSku(e.target.value);
+                      setSkuEdited(true);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            <div className="space-y-4">
+              <SectionLabel>HSN & Tax Configuration</SectionLabel>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>HSN Code</Label>
+                  <HsnPicker
+                    value={hsnCode}
+                    onChange={(code, gst, desc) => {
+                      setHsnCode(code);
+                      setGstRate(gst);
+                      setHsnDescription(desc);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="drawer-inv-hsn-desc">HSN Description</Label>
+                  <Input 
+                    id="drawer-inv-hsn-desc" 
+                    value={hsnDescription || "Auto-fetched on save"} 
+                    disabled 
+                    readOnly 
+                    className="bg-slate-100 text-slate-500" 
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="drawer-inv-gst">Current GST Rate (%)</Label>
+                  {gstRate ? (
+                    <Input 
+                      id="drawer-inv-gst" 
+                      name="gstRate" 
+                      type="number" 
+                      value={gstRate}
+                      disabled
+                      readOnly
+                      className="bg-slate-100 text-slate-700 font-bold"
+                    />
+                  ) : (
+                     <Input 
+                      id="drawer-inv-gst" 
+                      value="Pending"
+                      disabled
+                      readOnly
+                      className="bg-slate-100 text-slate-500 italic"
+                    />
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Note: GST rate is managed centrally. Enter the HSN Code and save. The system will automatically fetch the exact GST rate and HSN description from the HSN Master on save. To update GST rates later, use the Refresh button.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1097,11 +1293,11 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-inv-purchase">Purchase Price</Label>
-                  <CurrencyInput id="drawer-inv-purchase" name="purchasePrice" prefix="$" value={invPurchasePrice} onChange={setInvPurchasePrice} />
+                  <CurrencyInput id="drawer-inv-purchase" name="purchasePrice" value={invPurchasePrice} onChange={setInvPurchasePrice} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-inv-sale">Sale Price</Label>
-                  <CurrencyInput id="drawer-inv-sale" name="salePrice" prefix="$" value={invSalePrice} onChange={setInvSalePrice} />
+                  <CurrencyInput id="drawer-inv-sale" name="salePrice" value={invSalePrice} onChange={setInvSalePrice} />
                 </div>
               </div>
             </div>
@@ -1121,6 +1317,91 @@ function InventoryDrawer({ open, onClose }: { open: boolean; onClose: () => void
                 </div>
               </div>
             </div>
+
+            <div className="h-px bg-border" />
+
+            {!isDirectSelling && (
+              <>
+                <div className="space-y-4">
+                  <SectionLabel>Eyelet Pricing (₹ per unit)</SectionLabel>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Metal</Label>
+                      <Input type="number" min={0} value={eyeletMetal} onChange={(e) => setEyeletMetal(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Plastic</Label>
+                      <Input type="number" min={0} value={eyeletPlastic} onChange={(e) => setEyeletPlastic(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>None</Label>
+                      <Input type="number" min={0} value={eyeletNone} onChange={(e) => setEyeletNone(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div className="space-y-4">
+                  <SectionLabel>Delivery Pricing (₹ Flat Rate)</SectionLabel>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>Door Delivery</Label>
+                      <Input type="number" min={0} value={deliveryDoor} onChange={(e) => setDeliveryDoor(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Courier</Label>
+                      <Input type="number" min={0} value={deliveryCourier} onChange={(e) => setDeliveryCourier(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Transport</Label>
+                      <Input type="number" min={0} value={deliveryTransport} onChange={(e) => setDeliveryTransport(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div className="space-y-4">
+                  <SectionLabel>Product Specs</SectionLabel>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Max Width</Label>
+                      <Input placeholder="e.g. 10ft" value={specMaxWidth} onChange={(e) => setSpecMaxWidth(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>GSM</Label>
+                      <Input placeholder="e.g. 340" value={specGsm} onChange={(e) => setSpecGsm(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border" />
+              </>
+            )}
+
+            <div className="space-y-4">
+              <SectionLabel>Media Assets</SectionLabel>
+              <div className="grid gap-4 sm:grid-cols-1">
+                <div className="space-y-2">
+                  <Label>Image URLs (comma separated)</Label>
+                  <Input placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg" value={mediaImages} onChange={(e) => setMediaImages(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Video URL</Label>
+                  <Input placeholder="https://youtube.com/..." value={mediaVideo} onChange={(e) => setMediaVideo(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {!isDirectSelling && (
+              <>
+                <div className="h-px bg-border" />
+                <div className="space-y-4">
+                  <WorkflowBuilder steps={workflowSteps} onChange={setWorkflowSteps} />
+                </div>
+              </>
+            )}
 
             <div className="h-px bg-border" />
 
@@ -1183,7 +1464,7 @@ function QuoteDrawer({ open, onClose }: { open: boolean; onClose: () => void }) 
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -1323,7 +1604,7 @@ function SalesReceiptDrawer({ open, onClose }: { open: boolean; onClose: () => v
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -1474,7 +1755,7 @@ function PurchaseOrderDrawer({ open, onClose }: { open: boolean; onClose: () => 
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -1753,14 +2034,14 @@ function ExpenseDrawer({ open, onClose }: { open: boolean; onClose: () => void }
                           </div>
                           <div className="space-y-2">
                             <Label>Rate per mile *</Label>
-                            <CurrencyInput prefix="$" value={item.mileageRate} onChange={(v) => updateItem(index, { mileageRate: v })} />
+                            <CurrencyInput value={item.mileageRate} onChange={(v) => updateItem(index, { mileageRate: v })} />
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="space-y-2">
                             <Label>Amount *</Label>
-                            <CurrencyInput prefix="$" value={item.amount} onChange={(v) => updateItem(index, { amount: v })} />
+                            <CurrencyInput value={item.amount} onChange={(v) => updateItem(index, { amount: v })} />
                           </div>
                           <div className="space-y-2">
                             <Label>Category</Label>
@@ -1949,7 +2230,7 @@ function FixedAssetDrawer({ open, onClose }: { open: boolean; onClose: () => voi
                 </div>
                 <div className="space-y-2">
                   <Label>Purchase Price *</Label>
-                  <CurrencyInput prefix="$" value={purchasePrice} onChange={setPurchasePrice} placeholder="10000.00" />
+                  <CurrencyInput value={purchasePrice} onChange={setPurchasePrice} placeholder="10000.00" />
                 </div>
               </div>
             </div>
@@ -1961,7 +2242,7 @@ function FixedAssetDrawer({ open, onClose }: { open: boolean; onClose: () => voi
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Residual Value</Label>
-                  <CurrencyInput prefix="$" value={residualValue} onChange={setResidualValue} placeholder="500.00" />
+                  <CurrencyInput value={residualValue} onChange={setResidualValue} placeholder="500.00" />
                 </div>
                 <div className="space-y-2">
                   <Label>Useful Life (months)</Label>
@@ -2301,7 +2582,6 @@ function BudgetDrawer({ open, onClose }: { open: boolean; onClose: () => void })
                     <div className="flex items-center gap-3">
                       <Label className="text-xs text-muted-foreground shrink-0 w-16">Annual</Label>
                       <CurrencyInput
-                        prefix="$"
                         value={annualAmounts[i] ?? (line.total > 0 ? (line.total / 100).toFixed(2) : "")}
                         onChange={(v) => handleAnnualChange(i, v)}
                         placeholder="0.00"
@@ -2475,7 +2755,7 @@ function EmployeeDrawer({ open, onClose }: { open: boolean; onClose: () => void 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Annual Salary *</Label>
-                  <CurrencyInput prefix="$" value={salary} onChange={setSalary} placeholder="75000.00" />
+                  <CurrencyInput value={salary} onChange={setSalary} placeholder="75000.00" />
                 </div>
                 <div className="space-y-2">
                   <Label>Pay Frequency</Label>
@@ -2564,7 +2844,7 @@ function CreditNoteDrawer({ open, onClose }: { open: boolean; onClose: () => voi
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -2690,7 +2970,7 @@ function RecurringDrawer({ open, onClose }: { open: boolean; onClose: () => void
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -3709,7 +3989,7 @@ function ContractorDrawer({ open, onClose }: { open: boolean; onClose: () => voi
                 </div>
                 <div className="space-y-2">
                   <Label>Default Rate</Label>
-                  <CurrencyInput prefix="$" value={cRate} onChange={setCRate} placeholder="150.00" />
+                  <CurrencyInput value={cRate} onChange={setCRate} placeholder="150.00" />
                 </div>
                 <div className="space-y-2">
                   <Label>Currency</Label>
@@ -3817,7 +4097,7 @@ function DealDrawer({ open, onClose, initialData }: { open: boolean; onClose: ()
           contactId: contactId || undefined,
           title,
           valueCents: value ? Math.round(parseFloat(value) * 100) : 0,
-          currency: "USD",
+          currency: "INR",
           probability: probability ? parseInt(probability) : null,
           expectedCloseDate: expectedClose || null,
           source: source || null,
@@ -4004,7 +4284,7 @@ function DebitNoteDrawer({ open, onClose }: { open: boolean; onClose: () => void
             quantity: parseFloat(l.quantity) || 1,
             unitPrice: parseFloat(l.unitPrice) || 0,
             accountId: l.accountId || null,
-            taxRateId: l.taxRateId || null,
+            taxRateId: l.taxRateId || null, inventoryItemId: l.inventoryItemId || null,
           })),
         }),
       });
@@ -4115,7 +4395,7 @@ function CustomerCreditDrawer({ open, onClose }: { open: boolean; onClose: () =>
     e.preventDefault();
     if (!contactId) { toast.error("Please select a customer"); return; }
     if (!bankAccountId) { toast.error("Please choose where the money was paid in"); return; }
-    const cents = decimalToMinorUnits(amount, currencyCode || "USD");
+    const cents = decimalToMinorUnits(amount, currencyCode || "INR");
     if (cents <= 0) { toast.error("Please enter an amount"); return; }
     setSaving(true);
     const orgId = localStorage.getItem("activeOrgId");
@@ -4176,7 +4456,7 @@ function CustomerCreditDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-credit-amount">Amount</Label>
-                  <CurrencyInput id="drawer-credit-amount" prefix="$" value={amount} onChange={setAmount} />
+                  <CurrencyInput id="drawer-credit-amount" value={amount} onChange={setAmount} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -4337,7 +4617,7 @@ function LoanDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-loan-principal">Loan amount</Label>
-                  <CurrencyInput id="drawer-loan-principal" prefix="$" value={principalAmount} onChange={setPrincipalAmount} />
+                  <CurrencyInput id="drawer-loan-principal" value={principalAmount} onChange={setPrincipalAmount} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-loan-rate">Interest rate (%)</Label>
@@ -4673,7 +4953,7 @@ function AccrualScheduleDrawer({ open, onClose }: { open: boolean; onClose: () =
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-accrual-amount">Total amount</Label>
-                  <CurrencyInput id="drawer-accrual-amount" prefix="$" value={totalAmount} onChange={setTotalAmount} />
+                  <CurrencyInput id="drawer-accrual-amount" value={totalAmount} onChange={setTotalAmount} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="drawer-accrual-periods">Number of periods</Label>
@@ -4822,7 +5102,7 @@ function RevenueScheduleDrawer({ open, onClose }: { open: boolean; onClose: () =
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="drawer-revsched-amount">Total amount</Label>
-                  <CurrencyInput id="drawer-revsched-amount" prefix="$" value={totalAmount} onChange={setTotalAmount} />
+                  <CurrencyInput id="drawer-revsched-amount" value={totalAmount} onChange={setTotalAmount} />
                 </div>
                 <div className="space-y-2">
                   <Label>Method</Label>

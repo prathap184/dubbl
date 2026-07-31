@@ -575,19 +575,19 @@ export default function PayrollRunDetailPage() {
                   )}
                   <div className="hidden sm:block text-right">
                     <p className="text-xs text-muted-foreground">Before deductions</p>
-                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.grossAmount, item.currency ?? "USD")}</p>
+                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.grossAmount, item.currency ?? "INR")}</p>
                   </div>
                   <div className="hidden sm:block text-right">
                     <p className="text-xs text-muted-foreground">Tax</p>
-                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.taxAmount, item.currency ?? "USD")}</p>
+                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.taxAmount, item.currency ?? "INR")}</p>
                   </div>
                   <div className="hidden sm:block text-right">
                     <p className="text-xs text-muted-foreground">Other deductions</p>
-                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.deductions, item.currency ?? "USD")}</p>
+                    <p className="text-sm font-mono tabular-nums">{formatMoney(item.deductions, item.currency ?? "INR")}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Take-home</p>
-                    <p className="text-sm font-mono tabular-nums font-medium">{formatMoney(item.netAmount, item.currency ?? "USD")}</p>
+                    <p className="text-sm font-mono tabular-nums font-medium">{formatMoney(item.netAmount, item.currency ?? "INR")}</p>
                   </div>
                 </div>
               </div>
@@ -659,7 +659,6 @@ export default function PayrollRunDetailPage() {
                 <div className="space-y-2">
                   <Label>Amount</Label>
                   <CurrencyInput
-                    prefix="$"
                     value={bonusForm.amount}
                     onChange={(v) => setBonusForm((f) => ({ ...f, amount: v }))}
                   />

@@ -566,7 +566,6 @@ export default function FixedAssetDetailPage() {
             <div className="space-y-2">
               <Label>Amount you got for it</Label>
               <CurrencyInput
-                prefix="$"
                 value={disposeAmount}
                 onChange={setDisposeAmount}
               />
@@ -606,7 +605,6 @@ export default function FixedAssetDetailPage() {
             <div className="space-y-2">
               <Label>New value (must be higher than current)</Label>
               <CurrencyInput
-                prefix="$"
                 value={revalueAmount}
                 onChange={setRevalueAmount}
               />
@@ -655,7 +653,6 @@ export default function FixedAssetDetailPage() {
             <div className="space-y-2">
               <Label>New value (must be lower than current)</Label>
               <CurrencyInput
-                prefix="$"
                 value={impairAmount}
                 onChange={setImpairAmount}
               />
@@ -735,7 +732,6 @@ export default function FixedAssetDetailPage() {
             <div className="space-y-2">
               <Label>Amount</Label>
               <CurrencyInput
-                prefix="$"
                 value={costAmount}
                 onChange={setCostAmount}
               />

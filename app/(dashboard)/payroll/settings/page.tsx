@@ -685,7 +685,7 @@ export default function PayrollSettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Default Amount ($)</Label>
-                  <CurrencyInput prefix="$" value={newDeduction.defaultAmount} onChange={(v) => setNewDeduction({ ...newDeduction, defaultAmount: v })} />
+                  <CurrencyInput value={newDeduction.defaultAmount} onChange={(v) => setNewDeduction({ ...newDeduction, defaultAmount: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Default Percent (%)</Label>
@@ -739,11 +739,11 @@ export default function PayrollSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Min Income</Label>
-                  <CurrencyInput prefix="$" value={newBracket.minIncome} onChange={(v) => setNewBracket({ ...newBracket, minIncome: v })} />
+                  <CurrencyInput value={newBracket.minIncome} onChange={(v) => setNewBracket({ ...newBracket, minIncome: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Max Income</Label>
-                  <CurrencyInput prefix="$" value={newBracket.maxIncome} onChange={(v) => setNewBracket({ ...newBracket, maxIncome: v })} placeholder="Unlimited" />
+                  <CurrencyInput value={newBracket.maxIncome} onChange={(v) => setNewBracket({ ...newBracket, maxIncome: v })} placeholder="Unlimited" />
                 </div>
               </div>
             </div>
@@ -906,15 +906,15 @@ export default function PayrollSettingsPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Min Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.minSalary} onChange={(v) => setNewBand({ ...newBand, minSalary: v })} />
+                  <CurrencyInput value={newBand.minSalary} onChange={(v) => setNewBand({ ...newBand, minSalary: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Mid Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.midSalary} onChange={(v) => setNewBand({ ...newBand, midSalary: v })} />
+                  <CurrencyInput value={newBand.midSalary} onChange={(v) => setNewBand({ ...newBand, midSalary: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Max Salary</Label>
-                  <CurrencyInput prefix="$" value={newBand.maxSalary} onChange={(v) => setNewBand({ ...newBand, maxSalary: v })} />
+                  <CurrencyInput value={newBand.maxSalary} onChange={(v) => setNewBand({ ...newBand, maxSalary: v })} />
                 </div>
               </div>
             </div>

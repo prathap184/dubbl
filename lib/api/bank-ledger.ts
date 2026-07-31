@@ -49,7 +49,7 @@ export async function ensureBankLedgerAccount(
   if (account.chartAccountId) return account.chartAccountId;
 
   const band = bandFor(account.accountType);
-  const currencyCode = account.currencyCode || "USD";
+  const currencyCode = account.currencyCode || "INR";
 
   // 1. Reuse the standard account for this type when present and unclaimed.
   const standard = await exec.query.chartAccount.findFirst({

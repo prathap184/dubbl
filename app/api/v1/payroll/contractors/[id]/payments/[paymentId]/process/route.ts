@@ -28,7 +28,7 @@ export async function POST(
       where: eq(organization.id, ctx.organizationId),
       columns: { defaultCurrency: true },
     });
-    const baseCurrency = org?.defaultCurrency ?? "USD";
+    const baseCurrency = org?.defaultCurrency ?? "INR";
 
     // Contractor (1099) cost is Subcontractor Expense (5130), NOT employee
     // Wages (5100) — keep contractor cost out of the employee payroll line.

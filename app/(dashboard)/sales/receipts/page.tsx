@@ -291,7 +291,11 @@ export default function SalesReceiptsPage() {
                     <div className="size-7" />
                     <p className="text-sm font-semibold">Nothing owed</p>
                   </div>
-                  <span className="font-mono text-sm font-bold">$0.00</span>
+                  <span className="font-mono text-sm font-bold">{formatMoney(0)}</span>
+                </div>
+                <div className="flex justify-between items-center mt-2 border-t pt-2">
+                  <span className="text-sm font-medium">Overdue</span>
+                  <span className="font-mono text-sm font-bold">{formatMoney(0)}</span>
                 </div>
               </div>
             </div>

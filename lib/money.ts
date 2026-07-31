@@ -28,13 +28,19 @@ export function decimalToCents(value: string | number, decimals = 2): number {
  */
 export function decimalToMinorUnits(
   value: string | number,
-  currency = "USD"
+  currency = "INR"
 ): number {
   return decimalToCents(value, getCurrencyMinorUnits(currency));
 }
 
-export function minorUnitsToDecimal(units: number, currency = "USD"): string {
+export function minorUnitsToDecimal(units: number, currency = "INR"): string {
   return centsToDecimal(units, getCurrencyMinorUnits(currency));
+}
+
+let activeCurrency = "INR";
+
+export function setActiveCurrency(currency: string) {
+  activeCurrency = currency;
 }
 
 /**
@@ -44,9 +50,10 @@ export function minorUnitsToDecimal(units: number, currency = "USD"): string {
  */
 export function formatMoney(
   cents: number,
-  currency = "USD",
-  locale = "en-US"
+  currency = activeCurrency,
+  locale = "en-IN"
 ): string {
+  if (!currency) currency = "INR";
   const minorUnits = getCurrencyMinorUnits(currency);
   const amount = cents / Math.pow(10, minorUnits);
   return new Intl.NumberFormat(locale, {
@@ -55,6 +62,21 @@ export function formatMoney(
     minimumFractionDigits: minorUnits,
     maximumFractionDigits: minorUnits,
   }).format(amount);
+}
+
+/** Get the currency symbol (e.g. '₹' for INR) */
+export function getCurrencySymbol(currency = activeCurrency, locale = "en-IN"): string {
+  if (!currency) currency = "INR";
+  const formatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  // Find the currency symbol part
+  const parts = formatter.formatToParts(0);
+  const currencyPart = parts.find((part) => part.type === "currency");
+  return currencyPart ? currencyPart.value : currency;
 }
 
 /** Parse a user-entered money string to cents (strips symbols/commas) */

@@ -216,7 +216,6 @@ export default function InventoryItemSuppliersPage() {
             <div className="space-y-1.5">
               <Label className="text-xs">Purchase Price</Label>
               <CurrencyInput
-                prefix="$"
                 value={price}
                 onChange={setPrice}
               />

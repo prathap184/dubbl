@@ -343,7 +343,6 @@ export default function BudgetSettingsPage() {
                   <div className="flex items-center gap-3">
                     <Label className="text-xs text-muted-foreground shrink-0 w-16">Annual</Label>
                     <CurrencyInput
-                      prefix="$"
                       value={annualAmounts[i] ?? (line.total / 100).toFixed(2)}
                       onChange={(v) => handleAnnualChange(i, v)}
                       placeholder="0.00"

@@ -35,7 +35,7 @@ const itemSchema = z.object({
 const createSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable().optional(),
-  currencyCode: currencyCodeSchema.default("USD"),
+  currencyCode: currencyCodeSchema.default("INR"),
   contactId: z.string().uuid().nullable().optional(),
   taxRateId: z.string().uuid().nullable().optional(),
   costCenterId: z.string().uuid().nullable().optional(),
@@ -130,7 +130,7 @@ export async function POST(
         where: eq(organization.id, ctx.organizationId),
         columns: { defaultCurrency: true },
       });
-      const base = org?.defaultCurrency ?? "USD";
+      const base = org?.defaultCurrency ?? "INR";
       const fallback = await ensureAccountByCode(
         ctx.organizationId,
         {

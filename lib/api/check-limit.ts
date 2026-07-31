@@ -126,7 +126,7 @@ export async function checkMultiCurrency(orgId: string, currencyCode: string) {
   const org = await db.query.organization.findFirst({
     where: eq(organization.id, orgId),
   });
-  const defaultCurrency = org?.defaultCurrency ?? "USD";
+  const defaultCurrency = org?.defaultCurrency ?? "INR";
 
   if (currencyCode && currencyCode !== defaultCurrency) {
     throw new LimitExceededError(

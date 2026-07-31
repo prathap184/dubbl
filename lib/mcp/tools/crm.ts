@@ -249,7 +249,7 @@ export function registerCrmTools(server: McpServer, ctx: AuthContext) {
         .describe("Deal value in integer cents (e.g. 1250 = $12.50); defaults to 0"),
       currency: currencyCodeSchema
         .optional()
-        .describe("ISO 4217 currency code for the deal value; defaults to USD"),
+        .describe("ISO 4217 currency code for the deal value; defaults to INR"),
       probability: z
         .number()
         .int()

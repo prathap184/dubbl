@@ -88,7 +88,7 @@ export const project = pgTable("project", {
   totalHours: integer("total_hours").notNull().default(0), // minutes
   totalBilled: integer("total_billed").notNull().default(0), // cents
   estimatedHours: integer("estimated_hours").notNull().default(0), // minutes
-  currency: text("currency").notNull().default("USD"),
+  currency: text("currency").notNull().default("INR"),
   // Timeline
   startDate: date("start_date"),
   endDate: date("end_date"),

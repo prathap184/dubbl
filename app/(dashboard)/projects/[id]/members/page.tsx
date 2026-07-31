@@ -387,7 +387,7 @@ export default function MembersPage() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Compensation</p>
               <div className="space-y-2">
                 <Label>Hourly Rate (optional)</Label>
-                <CurrencyInput prefix="$" value={hourlyRate} onChange={setHourlyRate} />
+                <CurrencyInput value={hourlyRate} onChange={setHourlyRate} />
                 <p className="text-[11px] text-muted-foreground">Override the project-level hourly rate for this member.</p>
               </div>
             </div>

@@ -12,7 +12,7 @@ import type { AuthContext } from "@/lib/api/auth-context";
 export function registerEmailTools(server: McpServer, ctx: AuthContext) {
   server.tool(
     "send_document_email",
-    "Send a branded email for a document (invoice, quote, credit_note, purchase_order, debit_note). The email uses the dubbl template with document details (number, amount, dates). You provide the document info and an optional personal message. Does not change document status - use the send action for that. Checks email limits. Amounts in cents.",
+    "Send a branded email for a document (invoice, quote, credit_note, purchase_order, debit_note). The email uses the Pixel Marketing template with document details (number, amount, dates). You provide the document info and an optional personal message. Does not change document status - use the send action for that. Checks email limits. Amounts in cents.",
     {
       documentType: z
         .enum(["invoice", "quote", "credit_note", "purchase_order", "debit_note"])
@@ -102,7 +102,7 @@ export function registerEmailTools(server: McpServer, ctx: AuthContext) {
                   invoiceNumber: inv.invoiceNumber,
                   issueDate: inv.issueDate,
                   dueDate: inv.dueDate,
-                  currencyCode: "USD",
+                  currencyCode: "INR",
                   lines: inv.lines.map((l) => ({
                     description: l.description,
                     quantity: l.quantity,
@@ -226,7 +226,7 @@ export function registerEmailTools(server: McpServer, ctx: AuthContext) {
                   invoiceNumber: inv.invoiceNumber,
                   issueDate: inv.issueDate,
                   dueDate: inv.dueDate,
-                  currencyCode: "USD",
+                  currencyCode: "INR",
                   lines: inv.lines.map((l) => ({
                     description: l.description,
                     quantity: l.quantity,

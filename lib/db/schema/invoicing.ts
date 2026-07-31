@@ -93,10 +93,13 @@ export const invoice = pgTable("invoice", {
   notes: text("notes"),
   subtotal: integer("subtotal").notNull().default(0),
   taxTotal: integer("tax_total").notNull().default(0),
+  cgstTotal: integer("cgst_total").notNull().default(0),
+  sgstTotal: integer("sgst_total").notNull().default(0),
+  igstTotal: integer("igst_total").notNull().default(0),
   total: integer("total").notNull().default(0),
   amountPaid: integer("amount_paid").notNull().default(0),
   amountDue: integer("amount_due").notNull().default(0),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   senderSnapshot: jsonb("sender_snapshot"),
   recipientSnapshot: jsonb("recipient_snapshot"),
   paymentLinkToken: text("payment_link_token").unique(),
@@ -126,7 +129,16 @@ export const invoiceLine = pgTable("invoice_line", {
   taxRateId: uuid("tax_rate_id").references(() => taxRate.id),
   discountPercent: integer("discount_percent").notNull().default(0), // basis points: 1000 = 10%
   taxAmount: integer("tax_amount").notNull().default(0),
+  cgstAmount: integer("cgst_amount").notNull().default(0),
+  sgstAmount: integer("sgst_amount").notNull().default(0),
+  igstAmount: integer("igst_amount").notNull().default(0),
   amount: integer("amount").notNull().default(0), // qty * unitPrice - discount (before tax)
+  width: integer("width"),
+  length: integer("length"),
+  sqFt: integer("sq_ft"),
+  finishAmount: integer("finish_amount").notNull().default(0),
+  deliveryMode: text("delivery_mode"),
+  deliveryAmount: integer("delivery_amount").notNull().default(0),
   costCenterId: uuid("cost_center_id").references(() => costCenter.id),
   // Job-costing dimension. Project lives in ./projects; plain uuid (no FK) to avoid import cycle.
   projectId: uuid("project_id"),
@@ -157,7 +169,7 @@ export const quote = pgTable("quote", {
   taxTotal: integer("tax_total").notNull().default(0),
   total: integer("total").notNull().default(0),
   billedTotal: integer("billed_total").notNull().default(0), // cents already invoiced via progress/milestone billing
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   convertedInvoiceId: uuid("converted_invoice_id"),
   sentAt: timestamp("sent_at", { mode: "date" }),
   createdBy: uuid("created_by").references(() => users.id),
@@ -208,7 +220,7 @@ export const creditNote = pgTable("credit_note", {
   total: integer("total").notNull().default(0),
   amountApplied: integer("amount_applied").notNull().default(0),
   amountRemaining: integer("amount_remaining").notNull().default(0),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   journalEntryId: uuid("journal_entry_id").references(() => journalEntry.id),
   sentAt: timestamp("sent_at", { mode: "date" }),
   voidedAt: timestamp("voided_at", { mode: "date" }),
@@ -257,7 +269,7 @@ export const salesReceipt = pgTable("sales_receipt", {
   subtotal: integer("subtotal").notNull().default(0),
   taxTotal: integer("tax_total").notNull().default(0),
   total: integer("total").notNull().default(0),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   // Money lands in a bank account (preferred) or, failing that, a chart-of-accounts deposit account.
   bankAccountId: uuid("bank_account_id").references(() => bankAccount.id),
   depositAccountId: uuid("deposit_account_id").references(() => chartAccount.id),
@@ -305,7 +317,7 @@ export const customerCredit = pgTable("customer_credit", {
     .notNull()
     .references(() => contact.id),
   date: date("date").notNull(),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   originalAmount: integer("original_amount").notNull().default(0), // cents
   amountRemaining: integer("amount_remaining").notNull().default(0), // cents unapplied/available
   sourceType: customerCreditSourceEnum("source_type").notNull(),

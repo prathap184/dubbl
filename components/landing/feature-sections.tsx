@@ -676,7 +676,7 @@ function SolutionShowcase() {
               fillOpacity="0.85"
             />
           </svg>
-          <span className="text-sm font-semibold tracking-tight text-white/90">dubbl</span>
+          <span className="text-sm font-semibold tracking-tight text-white/90">Pixel Marketing</span>
         </motion.div>
       </div>
 
@@ -766,7 +766,7 @@ function SolutionSection() {
                 </span>
               </h2>
               <p className="mt-5 max-w-2xl text-lg leading-relaxed text-emerald-100">
-                dubbl brings accounting, invoicing, inventory, project management,
+                Pixel Marketing brings accounting, invoicing, inventory, project management,
                 payroll, and CRM into one place. AI-ready with built-in MCP
                 support.
               </p>

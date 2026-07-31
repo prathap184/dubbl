@@ -9,7 +9,7 @@ export const consolidationGroup = pgTable("consolidation_group", {
   parentOrgId: uuid("parent_org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   // Currency the consolidated worksheet is reported in (IAS 21 presentation currency).
-  presentationCurrency: text("presentation_currency").notNull().default("USD"),
+  presentationCurrency: text("presentation_currency").notNull().default("INR"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { mode: "date" }),

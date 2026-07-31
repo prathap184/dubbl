@@ -75,7 +75,7 @@ export const bankAccount = pgTable("bank_account", {
   accountName: text("account_name").notNull(),
   accountNumber: text("account_number"),
   bankName: text("bank_name"),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   countryCode: text("country_code"),
   accountType: bankAccountTypeEnum("account_type").notNull().default("checking"),
   color: text("color").notNull().default("#0f766e"),

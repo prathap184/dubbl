@@ -157,8 +157,8 @@ export function registerRecurringTemplateTools(server: McpServer, ctx: AuthConte
       currencyCode: z
         .string()
         .optional()
-        .default("USD")
-        .describe("Currency code (defaults to USD)"),
+        .default("INR")
+        .describe("Currency code (defaults to INR)"),
       autoSend: z
         .boolean()
         .optional()
@@ -224,7 +224,7 @@ export function registerRecurringTemplateTools(server: McpServer, ctx: AuthConte
             maxOccurrences: params.maxOccurrences || null,
             reference: params.reference || null,
             notes: params.notes || null,
-            currencyCode: params.currencyCode ?? "USD",
+            currencyCode: params.currencyCode ?? "INR",
             autoSend: params.autoSend,
             createAsApproved: params.createAsApproved,
             createdBy: ctx.userId,

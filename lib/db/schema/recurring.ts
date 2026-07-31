@@ -53,7 +53,7 @@ export const recurringTemplate = pgTable("recurring_template", {
   status: recurringStatusEnum("status").notNull().default("active"),
   reference: text("reference"),
   notes: text("notes"),
-  currencyCode: text("currency_code").notNull().default("USD"),
+  currencyCode: text("currency_code").notNull().default("INR"),
   // Recurring-invoice automation. When autoSend is true the generator posts the
   // invoice GL (status -> sent) and runs the existing send pipeline (email) on
   // each occurrence. createAsApproved (a.k.a. create-as-approved) likewise posts

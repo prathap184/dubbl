@@ -142,7 +142,7 @@ export default function DebitNoteDetailPage() {
 
   async function handleApply() {
     if (!orgId || !applyBillId) return;
-    const amount = decimalToMinorUnits(parseFloat(applyAmount) || 0, dn?.currencyCode || "USD");
+    const amount = decimalToMinorUnits(parseFloat(applyAmount) || 0, dn?.currencyCode || "INR");
     if (!amount || amount <= 0) {
       toast.error("Enter a valid amount");
       return;
@@ -243,7 +243,6 @@ export default function DebitNoteDetailPage() {
                 <div className="space-y-2">
                   <Label>Amount</Label>
                   <CurrencyInput
-                    prefix="$"
                     value={applyAmount}
                     onChange={setApplyAmount}
                     placeholder={minorUnitsToDecimal(dn.amountRemaining, dn.currencyCode)}
