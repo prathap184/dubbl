@@ -8,7 +8,7 @@ if (!url) {
   process.exit(1);
 }
 
-console.log("⚡ Connecting to Database for HIGH SPEED restore...");
+console.log("⚡ Connecting to Database for HIGH SPEED restore & verification...");
 const pool = new pg.Pool({
   connectionString: url,
   max: 10,
@@ -50,7 +50,7 @@ async function setupAndRestore() {
     }
 
     if (erpSql) {
-      console.log(`🛠️ Found DDL at ${foundPath}. Creating ERP table structures...`);
+      console.log(`🛠️ Ensuring ERP table structures from ${foundPath}...`);
       const ddlStatements = erpSql
         .split("\n")
         .map((l) => l.trim())
@@ -59,8 +59,6 @@ async function setupAndRestore() {
       for (const ddl of ddlStatements) {
         await runQueryWithRetry(ddl, 1);
       }
-    } else {
-      console.warn("⚠️ Warning: Precision Press ERP DDL file not found in search paths!");
     }
 
     const backupFilePath = path.resolve(process.cwd(), "drizzle", "supabase_full_backup.sql");
@@ -95,7 +93,6 @@ async function setupAndRestore() {
       if (res.success) {
         executed += batch.length;
       } else {
-        // Line by line fast check
         for (const stmt of batch) {
           const lineRes = await runQueryWithRetry(stmt, 1);
           if (lineRes.success) {
@@ -105,21 +102,29 @@ async function setupAndRestore() {
           }
         }
       }
-
-      const currentCount = Math.min(i + BATCH_SIZE, statements.length);
-      const percent = Math.min(100, Math.round((currentCount / statements.length) * 100));
-      console.log(`🚀 Fast-Restore: ${percent}% (${currentCount}/${statements.length} queries processed)`);
     }
 
-    console.log(`\n🎉 Full restore completed!`);
-    console.log(`✅ Successfully Restored/Inserted: ${executed} queries`);
-    console.log(`ℹ️ Skipped (Already Existed): ${errors} queries`);
+    console.log(`\n🎉 Restore & Verification Summary:`);
+    console.log(`✅ Queries Executed: ${executed}`);
+    console.log(`ℹ️ Queries Skipped (Data Already Exists in Database): ${errors}`);
+
+    // Print live table counts in self-hosted DB
+    console.log("\n📊 CURRENT TABLE ROW COUNTS IN DATABASE:");
+    const tablesToVerify = ["orders", "order_items", "invoice", "products", "chart_account", "activity_logs", "auth.users"];
+    for (const table of tablesToVerify) {
+      try {
+        const countRes = await pool.query(`SELECT COUNT(*) FROM ${table}`);
+        console.log(`   👉 ${table.padEnd(20)} : ${countRes.rows[0].count} rows`);
+      } catch (err: any) {
+        console.log(`   ❌ ${table.padEnd(20)} : Table check error (${err.message})`);
+      }
+    }
   } finally {
     await pool.end();
   }
 }
 
 setupAndRestore().catch((err) => {
-  console.error("❌ High-speed restore failed:", err);
+  console.error("❌ Restore script error:", err);
   pool.end().then(() => process.exit(1));
 });
