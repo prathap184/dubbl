@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-console.log("🛠️ Rebuilding master initialization SQL script with OVERRIDING SYSTEM VALUE & exact column type rules...");
+console.log("🛠️ Rebuilding master initialization SQL script with correct PostgreSQL OVERRIDING SYSTEM VALUE placement & column type priorities...");
 
 const drizzleDir = path.resolve(process.cwd(), "drizzle");
 const erpDumpPath1 = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
@@ -114,10 +114,10 @@ if (fs.existsSync(backupPath)) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
-        colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
+      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+        colType = "jsonb";
       }
       fullSql += `ALTER TABLE ${fullTableName} ADD COLUMN IF NOT EXISTS "${col}" ${colType};\n`;
     }
@@ -171,7 +171,7 @@ if (fs.existsSync(backupPath)) {
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
-      line = line.replace(/INSERT INTO\s+(?:"auth"|auth)\."users"/i, 'INSERT INTO "auth"."users" OVERRIDING SYSTEM VALUE');
+      line = line.replace(/\)\s*VALUES/i, ') OVERRIDING SYSTEM VALUE VALUES');
       fixedAuthUsersCount++;
     }
 
