@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-console.log("🛠️ Building self-hosted master initializer with robust auto-patching & session_replication_role...");
+console.log("🛠️ Rebuilding master initialization SQL script with OVERRIDING SYSTEM VALUE & exact column type rules...");
 
 const drizzleDir = path.resolve(process.cwd(), "drizzle");
 const erpDumpPath1 = path.resolve(process.cwd(), "..", "Hindustan Enterprices", "precision-press-erp", "database_migration_dump_fixed.sql");
@@ -47,7 +47,7 @@ for (const file of migrationFiles) {
   }
 }
 
-// Step 2: Append ERP DDL Statements (with jsonb timestamp & serverTimestamp fix)
+// Step 2: Append ERP DDL Statements
 let erpPath = "";
 if (fs.existsSync(erpDumpPath1)) erpPath = erpDumpPath1;
 else if (fs.existsSync(erpDumpPath2)) erpPath = erpDumpPath2;
@@ -109,11 +109,12 @@ if (fs.existsSync(backupPath)) {
       let colType = "text";
       const lowerCol = col.toLowerCase();
       if (lowerCol === "id") continue;
-      if (lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
+
+      if (lowerCol === "workflow" || lowerCol.includes("words") || lowerCol.includes("text") || lowerCol.includes("note")) {
         colType = "text";
       } else if (lowerCol.endsWith("_at") || lowerCol.endsWith("at") || lowerCol.endsWith("_date") || lowerCol.endsWith("date") || lowerCol === "timestamp") {
         colType = "timestamp with time zone";
-      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("workflow") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
+      } else if (lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol === "totals" || lowerCol === "amounts" || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
         colType = "jsonb";
       } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("percent") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         colType = "numeric";
@@ -170,26 +171,8 @@ if (fs.existsSync(backupPath)) {
     line = line.replace(/'\{"__kind":"serverTimestamp"\}'::jsonb/gi, 'NOW()').replace(/'\{"__kind":"serverTimestamp"\}'/gi, 'NOW()');
 
     if (line.includes('INSERT INTO "auth"."users"') || line.includes('INSERT INTO auth.users')) {
-      const match = line.match(/INSERT INTO\s+(?:"auth"|auth)\."users"\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)(\s+ON CONFLICT[^;]+)?;?$/i);
-      if (match) {
-        const rawCols = match[1].split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-        const valTokens = parseSqlValuesTuple(match[2]);
-        const onConflictStr = match[3] || "";
-
-        const indicesToRemove = new Set<number>();
-        rawCols.forEach((colName, idx) => {
-          if (colName === "confirmed_at" || colName === "email") {
-            indicesToRemove.add(idx);
-          }
-        });
-
-        if (indicesToRemove.size > 0 && valTokens.length === rawCols.length) {
-          const newCols = rawCols.filter((_, idx) => !indicesToRemove.has(idx)).map(c => `"${c}"`);
-          const newVals = valTokens.filter((_, idx) => !indicesToRemove.has(idx));
-          line = `INSERT INTO "auth"."users" (${newCols.join(", ")}) VALUES (${newVals.join(", ")})${onConflictStr};`;
-          fixedAuthUsersCount++;
-        }
-      }
+      line = line.replace(/INSERT INTO\s+(?:"auth"|auth)\."users"/i, 'INSERT INTO "auth"."users" OVERRIDING SYSTEM VALUE');
+      fixedAuthUsersCount++;
     }
 
     // Determine target table for ordering
@@ -209,7 +192,7 @@ if (fs.existsSync(backupPath)) {
     }
   }
 
-  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts fixed, ${skippedSchemaMigrationsCount} schema_migrations skipped. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
+  console.log(`Transformed backup data: ${fixedAuthUsersCount} auth.users inserts updated with OVERRIDING SYSTEM VALUE, ${skippedSchemaMigrationsCount} schema_migrations skipped. ${parentInserts.length} parent inserts, ${childInserts.length} child inserts.`);
 
   fullSql += `-- Parent Table Inserts\n` + parentInserts.join("\n") + "\n\n";
   fullSql += `-- Child Table Inserts\n` + childInserts.join("\n") + "\n";
@@ -224,40 +207,3 @@ SET session_replication_role = 'origin';
 const outputPath = path.join(drizzleDir, "self_hosted_full_init.sql");
 fs.writeFileSync(outputPath, fullSql, "utf8");
 console.log(`✅ Successfully generated master bundle: ${outputPath} (${(fs.statSync(outputPath).size / 1024 / 1024).toFixed(2)} MB)`);
-
-function parseSqlValuesTuple(str: string): string[] {
-  const tokens: string[] = [];
-  let current = "";
-  let inString = false;
-  let quoteChar = "";
-
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    if (inString) {
-      current += char;
-      if (char === quoteChar) {
-        if (i + 1 < str.length && str[i + 1] === quoteChar) {
-          current += str[i + 1];
-          i++;
-        } else {
-          inString = false;
-        }
-      }
-    } else {
-      if (char === "'" || char === '"') {
-        inString = true;
-        quoteChar = char;
-        current += char;
-      } else if (char === ",") {
-        tokens.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-  }
-  if (current.trim()) {
-    tokens.push(current.trim());
-  }
-  return tokens;
-}
