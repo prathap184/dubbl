@@ -1,6 +1,9 @@
 -- =============================================================================
--- Complete Self-Hosted Supabase Full Database Initialization Script
+-- Master Self-Hosted Supabase Full Database Initialization Script
 -- =============================================================================
+
+-- 1. Disable Foreign Key Checks for fast, clean out-of-order data restore
+SET session_replication_role = 'replica';
 
 DROP SCHEMA IF EXISTS "public" CASCADE;
 CREATE SCHEMA "public";
@@ -3629,6 +3632,10 @@ ALTER TABLE "bill" ADD COLUMN "igst_total" integer DEFAULT 0 NOT NULL;--> statem
 ALTER TABLE "bill_line" ADD COLUMN "cgst_amount" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "bill_line" ADD COLUMN "sgst_amount" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "bill_line" ADD COLUMN "igst_amount" integer DEFAULT 0 NOT NULL;
+
+-- Fallback table definitions for backup tables
+CREATE TABLE IF NOT EXISTS "public"."activity_logs" ("id" text PRIMARY KEY, "action" text, "actor" text, "metadata" jsonb, "created_at" timestamp with time zone DEFAULT now());
+CREATE TABLE IF NOT EXISTS "public"."audit_logs" ("id" text PRIMARY KEY, "action_type" text, "actor" text, "metadata" jsonb, "created_at" timestamp with time zone DEFAULT now());
 
 -- Precision Press ERP DDL
 -- MIGRATION DUMP (SCHEMA + DATA)
@@ -7571,3 +7578,6 @@ INSERT INTO "auth"."users" ("instance_id", "id", "aud", "role", "email", "encryp
 INSERT INTO "auth"."users" ("instance_id", "id", "aud", "role", "email", "encrypted_password", "email_confirmed_at", "invited_at", "confirmation_token", "confirmation_sent_at", "recovery_token", "recovery_sent_at", "email_change_token_new", "email_change", "email_change_sent_at", "last_sign_in_at", "raw_app_meta_data", "raw_user_meta_data", "is_super_admin", "created_at", "updated_at", "phone", "phone_confirmed_at", "phone_change", "phone_change_token", "phone_change_sent_at", "confirmed_at", "email_change_token_current", "email_change_confirm_status", "banned_until", "reauthentication_token", "reauthentication_sent_at", "is_sso_user", "deleted_at", "is_anonymous") VALUES ('00000000-0000-0000-0000-000000000000', '8f9d8b78-d398-41df-a19a-61c79d62c747', 'authenticated', 'authenticated', 'power@gmail.com', '$2a$10$4hdZb4p/J/xerQa98uNsfO0ioFqFISwU77vKLiX0IJ3inC5vo8PDm', '2026-06-27T17:59:31.246Z', NULL, '', NULL, '', NULL, '', '', NULL, NULL, '{"provider":"email","providers":["email"]}', '{"name":"power","role":"DESIGNER","email_verified":true}', false, '2026-06-27T17:59:31.225Z', '2026-06-27T17:59:31.248Z', NULL, NULL, '', '', NULL, '2026-06-27T17:59:31.246Z', '', 0, NULL, '', NULL, false, NULL, false) ON CONFLICT DO NOTHING;
 
 
+
+-- Re-enable Foreign Key Constraints
+SET session_replication_role = 'origin';
