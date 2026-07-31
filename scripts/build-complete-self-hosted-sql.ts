@@ -93,7 +93,7 @@ function stripGeneratedColumns(sqlLine: string, schema: string, tableName: strin
 function stripAuthUsersGeneratedColumns(sqlLine: string): string {
   // email is NOT a generated column (confirmed via supabase_auth_admin DROP EXPRESSION test).
   // Only strip "confirmed_at" which is restricted in self-hosted Supabase.
-  return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at"]));
+  return stripGeneratedColumns(sqlLine, "auth", "users", new Set(["confirmed_at", "email"]));
 }
 
 let fullSql = `-- =============================================================================
@@ -202,7 +202,7 @@ if (fs.existsSync(backupPath)) {
       // to prevent "allocated_logistics_percentage" / "allocated_logistics_amount" from being typed as jsonb.
       if (lowerCol.endsWith("_percentage") || lowerCol === "percentage" || (lowerCol.includes("percent") && !lowerCol.includes("logistics")) || (lowerCol.endsWith("_amount") && lowerCol !== "amounts")) {
         colType = "numeric";
-      } else if (lowerCol.includes("amount") || lowerCol.includes("total") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
+      } else if ((lowerCol.includes("amount") && lowerCol !== "amounts" && !lowerCol.includes("words")) || (lowerCol.includes("total") && lowerCol !== "totals") || lowerCol.includes("price") || lowerCol.includes("cost") || lowerCol.includes("quantity") || lowerCol.includes("rate") || lowerCol.includes("limit") || lowerCol.includes("credit") || lowerCol === "count" || lowerCol.endsWith("_count") || lowerCol.startsWith("count_")) {
         // numeric fields take priority over snapshot/jsonb check so taxable_value_snapshot, grand_total_snapshot resolve as numeric
         colType = "numeric";
       } else if (lowerCol === "amounts" || lowerCol === "totals" || lowerCol.includes("metadata") || lowerCol.includes("details") || lowerCol.includes("specs") || lowerCol.includes("items") || lowerCol.includes("snapshot") || lowerCol.includes("payload") || lowerCol.includes("addresses") || lowerCol.includes("config") || lowerCol.includes("data") || lowerCol.includes("logistics") || lowerCol.endsWith("_breakdown") || lowerCol.endsWith("_summary")) {
