@@ -17,7 +17,9 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "pnpm tsx --env-file=.env lib/db/seed.ts",
     "db:reset-supabase": "pnpm tsx --env-file=.env scripts/reset-and-seed-supabase.ts",
-    "db:backup": "pnpm tsx --env-file=.env scripts/export-supabase-backup.ts"
+    "db:backup": "pnpm tsx --env-file=.env scripts/export-supabase-backup.ts",
+    "db:restore-backup": "pnpm tsx --env-file=.env scripts/restore-supabase-backup.ts",
+    "db:full-restore": "pnpm tsx --env-file=.env scripts/setup-all-tables-and-restore.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
