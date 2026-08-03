@@ -392,6 +392,30 @@ export async function POST(request: Request) {
 
     logAudit({ ctx, action: "create", entityType: "invoice", entityId: created.id, request });
 
+    // Mark invoice generated in shared Supabase orders table
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (supabaseUrl && supabaseKey && parsed.reference) {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const refIds = parsed.reference.split(",").map((s) => s.trim()).filter(Boolean);
+        for (const refId of refIds) {
+          // Update order matching id, parent_order_id, or baseOrderId
+          await supabase
+            .from("orders")
+            .update({
+              is_invoice_generated: true,
+              invoice_number: invoiceNumber,
+              invoice_id: created.id,
+            })
+            .or(`id.eq.${refId},parent_order_id.eq.${refId},baseOrderId.eq.${refId}`);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to update orders status in Supabase", err);
+    }
+
     // Submit-for-approval on create: mirror the dedicated submit route. Resolve
     // the creating user's member record, find a matching active workflow, create
     // the approval_request, then flip the invoice to 'pending_approval'. If there

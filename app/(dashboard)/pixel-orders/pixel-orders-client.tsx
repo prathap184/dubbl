@@ -583,28 +583,38 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
                                 <ArrowRight size={14} />
                               </button>
                               <div className="flex flex-col gap-1 w-full max-w-[80px]">
-                                <button
-                                  disabled={processingOrderId === order.id || modalProcessing}
-                                  onClick={() => {
-                                    const parentId = order.parent_order_id || order.baseOrderId;
-                                    if (parentId) {
-                                      const siblings = initialOrders.filter((o: any) =>
-                                        o.parent_order_id === parentId || o.baseOrderId === parentId
-                                      );
-                                      if (siblings.length > 1) {
-                                        setSiblingsModal({ orders: siblings, parentId });
-                                        setSelectedSiblingIds(new Set([order.id]));
-                                        return;
-                                      }
-                                    }
-                                    handleAction(order, "invoice");
-                                  }}
-                                  className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:bg-indigo-100 bg-indigo-50 rounded py-1 cursor-pointer whitespace-nowrap transition-colors disabled:opacity-50"
-                                  title="Generate Invoice"
-                                >
-                                  {processingOrderId === order.id ? <Loader2 size={10} className="animate-spin inline mr-1" /> : null}
-                                  Invoice
-                                </button>
+                                {order.is_invoice_generated || order.invoice_number || order.invoice_id ? (
+                                   <span
+                                     className="w-full text-center text-[9px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-300 bg-emerald-50 rounded py-1 inline-flex items-center justify-center gap-1 shadow-sm"
+                                     title={`Invoice #${order.invoice_number || 'Generated'}`}
+                                   >
+                                     <CheckCircle size={9} className="text-emerald-600" />
+                                     {order.invoice_number ? order.invoice_number : 'Invoiced'}
+                                   </span>
+                                 ) : (
+                                   <button
+                                     disabled={processingOrderId === order.id || modalProcessing}
+                                     onClick={() => {
+                                       const parentId = order.parent_order_id || order.baseOrderId;
+                                       if (parentId) {
+                                         const siblings = initialOrders.filter((o: any) =>
+                                           o.parent_order_id === parentId || o.baseOrderId === parentId
+                                         );
+                                         if (siblings.length > 1) {
+                                           setSiblingsModal({ orders: siblings, parentId });
+                                           setSelectedSiblingIds(new Set([order.id]));
+                                           return;
+                                         }
+                                       }
+                                       handleAction(order, "invoice");
+                                     }}
+                                     className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:bg-indigo-100 bg-indigo-50 rounded py-1 cursor-pointer whitespace-nowrap transition-colors disabled:opacity-50"
+                                     title="Generate Invoice"
+                                   >
+                                     {processingOrderId === order.id ? <Loader2 size={10} className="animate-spin inline mr-1" /> : null}
+                                     Invoice
+                                   </button>
+                                 )}
                                 <button
                                   disabled={processingOrderId === order.id}
                                   onClick={() => handleAction(order, "salesReceipt")}
