@@ -616,13 +616,40 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
                                    </button>
                                  )}
                                 <button
-                                  disabled={processingOrderId === order.id}
-                                  onClick={() => handleAction(order, "salesReceipt")}
-                                  className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:bg-emerald-100 bg-emerald-50 rounded py-1 cursor-pointer whitespace-nowrap transition-colors disabled:opacity-50"
-                                  title="Record Receipt"
-                                >
-                                  Receipt
-                                </button>
+                                   disabled={processingOrderId === order.id}
+                                   onClick={async () => {
+                                     if (order.invoice_id) {
+                                       window.location.href = `/sales/${order.invoice_id}`;
+                                       return;
+                                     }
+                                     const refId = order.parent_order_id || order.baseOrderId || order.id;
+                                     setProcessingOrderId(order.id);
+                                     try {
+                                       const orgId = typeof window !== 'undefined' ? localStorage.getItem("activeOrgId") : null;
+                                       const headers: Record<string, string> = { "Content-Type": "application/json" };
+                                       if (orgId) headers["x-organization-id"] = orgId;
+                                       const res = await fetch(`/api/v1/invoices?limit=100`, { headers });
+                                       if (res.ok) {
+                                         const data = await res.json();
+                                         const match = data.data?.find((inv: any) => inv.reference && inv.reference.includes(refId));
+                                         if (match) {
+                                           window.location.href = `/sales/${match.id}`;
+                                           return;
+                                         }
+                                       }
+                                     } catch (e) {
+                                       console.warn("Failed lookup invoice", e);
+                                     } finally {
+                                       setProcessingOrderId(null);
+                                     }
+                                     handleAction(order, "salesReceipt");
+                                   }}
+                                   className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:bg-emerald-100 bg-emerald-50 rounded py-1 cursor-pointer whitespace-nowrap transition-colors disabled:opacity-50"
+                                   title="Record Receipt / View Sales"
+                                 >
+                                   {processingOrderId === order.id ? <Loader2 size={10} className="animate-spin inline mr-1" /> : null}
+                                   Receipt
+                                 </button>
                               </div>
                             </div>
                           </td>
