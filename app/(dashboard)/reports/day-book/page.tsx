@@ -50,14 +50,14 @@ export default function DayBookPage() {
 
   const filteredRecords = (data?.records || []).filter((r: any) => {
     if (voucherFilter === 'ALL') return true;
-    if (voucherFilter === 'INVOICE') return r.voucherType.includes('Invoice');
-    if (voucherFilter === 'RECEIPT') return r.voucherType.includes('Receipt');
-    if (voucherFilter === 'PREPAYMENT') return r.voucherType.includes('Prepayment');
-    if (voucherFilter === 'EXPENSE') return r.voucherType.includes('Payment') || r.voucherType.includes('Expense');
-    if (voucherFilter === 'PURCHASE') return r.voucherType.includes('Purchase') || r.voucherType.includes('Bill');
-    if (voucherFilter === 'CREDIT_NOTE') return r.voucherType.includes('Credit Note');
-    if (voucherFilter === 'DEBIT_NOTE') return r.voucherType.includes('Debit Note');
-    if (voucherFilter === 'JOURNAL') return r.voucherType.includes('Journal') || r.voucherType.includes('COGS');
+    if (voucherFilter === 'INVOICE') return r.voucherType === 'Sales Invoice';
+    if (voucherFilter === 'RECEIPT') return r.voucherType === 'Receipt';
+    if (voucherFilter === 'PAYMENT') return r.voucherType === 'Payment';
+    if (voucherFilter === 'PURCHASE') return r.voucherType === 'Purchase';
+    if (voucherFilter === 'STOCK_JOURNAL') return r.voucherType === 'Stock Journal';
+    if (voucherFilter === 'CREDIT_NOTE') return r.voucherType === 'Credit Note';
+    if (voucherFilter === 'DEBIT_NOTE') return r.voucherType === 'Debit Note';
+    if (voucherFilter === 'JOURNAL') return r.voucherType === 'Journal';
     return true;
   });
 
@@ -144,12 +144,12 @@ export default function DayBookPage() {
       }`}>
         <span className="text-[10px] uppercase tracking-wider mr-2 text-slate-600">Filter Vouchers:</span>
         {[
-          { id: 'ALL', label: 'All' },
+          { id: 'ALL', label: 'All Vouchers' },
           { id: 'INVOICE', label: 'Sales Invoices' },
           { id: 'RECEIPT', label: 'Receipts' },
-          { id: 'PREPAYMENT', label: 'Prepayments' },
-          { id: 'EXPENSE', label: 'Payments / Expenses' },
+          { id: 'PAYMENT', label: 'Payments' },
           { id: 'PURCHASE', label: 'Purchases' },
+          { id: 'STOCK_JOURNAL', label: 'Stock Journals' },
           { id: 'CREDIT_NOTE', label: 'Credit Notes' },
           { id: 'DEBIT_NOTE', label: 'Debit Notes' },
           { id: 'JOURNAL', label: 'Journals' },

@@ -79,38 +79,51 @@ export async function GET(request: Request) {
         };
       });
 
-      // Determine friendly voucher type & link
-      let voucherType = "Journal Entry";
+      // Tally Standard Voucher Type Classification
+      let voucherType = "Journal";
       let link = `/accounting`;
 
       const descLower = (ent.description || "").toLowerCase();
       const ref = ent.reference || "";
 
-      if (descLower.includes("invoice") || ent.sourceType === "invoice") {
+      // Check if it's a Customer Payment / Receipt (Inflow from Customer / Deposit)
+      if (
+        descLower.includes("payment for pay") ||
+        descLower.includes("sales receipt") ||
+        descLower.includes("auto-apply customer credit") ||
+        descLower.includes("prepayment") ||
+        ref === "prepayment" ||
+        ent.sourceType === "payment"
+      ) {
+        voucherType = "Receipt";
+        if (ent.sourceId) link = `/sales/payments/${ent.sourceId}`;
+      } 
+      // Check if it's a Sales Invoice
+      else if (descLower.startsWith("invoice inv") || (descLower.includes("invoice") && !descLower.includes("auto-apply")) || ent.sourceType === "invoice") {
         voucherType = "Sales Invoice";
         if (ent.sourceId) link = `/sales/${ent.sourceId}`;
-      } else if (descLower.includes("prepayment") || ref === "prepayment") {
-        voucherType = "Customer Prepayment";
-        if (ent.sourceId) link = `/sales/customer-prepayments/${ent.sourceId}`;
-      } else if (descLower.includes("payment for pay") || descLower.includes("sales receipt") || ent.sourceType === "payment") {
-        voucherType = "Receipt / Payment";
-        if (ent.sourceId) link = `/sales/payments/${ent.sourceId}`;
-      } else if (descLower.includes("cost of sales")) {
-        voucherType = "COGS Adjustment";
-      } else if (descLower.includes("auto-apply customer credit")) {
-        voucherType = "Credit Application";
-      } else if (descLower.includes("bill") || ent.sourceType === "bill") {
-        voucherType = "Purchase Bill";
+      } 
+      // Check if it's a Supplier Payment / Expense (Outflow to Vendor)
+      else if (descLower.includes("expense") || ent.sourceType === "expense") {
+        voucherType = "Payment"; // Tally calls vendor payouts "Payment"
+        if (ent.sourceId) link = `/purchases/expenses/${ent.sourceId}`;
+      } 
+      // Check if it's a Purchase Bill
+      else if (descLower.includes("bill") || ent.sourceType === "bill") {
+        voucherType = "Purchase";
         if (ent.sourceId) link = `/purchases/${ent.sourceId}`;
-      } else if (descLower.includes("credit note") || ent.sourceType === "credit_note") {
+      } 
+      // Check Returns & Credits
+      else if (descLower.includes("credit note") || ent.sourceType === "credit_note") {
         voucherType = "Credit Note";
         if (ent.sourceId) link = `/sales/credit-notes/${ent.sourceId}`;
       } else if (descLower.includes("debit note") || ent.sourceType === "debit_note") {
         voucherType = "Debit Note";
         if (ent.sourceId) link = `/purchases/debit-notes/${ent.sourceId}`;
-      } else if (descLower.includes("expense") || ent.sourceType === "expense") {
-        voucherType = "Expense Claim";
-        if (ent.sourceId) link = `/purchases/expenses/${ent.sourceId}`;
+      } 
+      // Check Cost of Sales / Inventory Stock Journals
+      else if (descLower.includes("cost of sales") || descLower.includes("opening stock") || descLower.includes("inventory adjustment")) {
+        voucherType = "Stock Journal";
       }
 
       records.push({
