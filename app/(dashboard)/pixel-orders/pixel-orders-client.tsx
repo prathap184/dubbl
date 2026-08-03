@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Loader2, Calendar, Truck, ArrowRight, Activity, CheckCircle, Search } from "lucide-react";
+import { Loader2, Calendar, Truck, ArrowRight, Activity, CheckCircle, Search, X, FileText } from "lucide-react";
 import { WorkflowPipelineVisual } from "@/components/pixel/WorkflowPipelineVisual";
 import { OrderThumbnail } from "@/components/pixel/OrderThumbnail";
 import { useCreateDrawer } from "@/components/dashboard/create-drawer";
@@ -26,6 +26,9 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
   const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [siblingsModal, setSiblingsModal] = useState<{ orders: any[]; parentId: string } | null>(null);
+  const [selectedSiblingIds, setSelectedSiblingIds] = useState<Set<string>>(new Set());
+  const [modalProcessing, setModalProcessing] = useState(false);
 
   const handleAction = async (order: any, type: "invoice" | "salesReceipt") => {
     try {
@@ -209,10 +212,101 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
       });
     } catch (err) {
       console.error("Failed to handle action", err);
-      // Fallback — open drawer without pre-fill rather than navigating away
       openDrawer(type, { reference: order.id });
     } finally {
       setProcessingOrderId(null);
+    }
+  };
+
+  // Handle invoicing multiple sibling orders together
+  const handleActionMultiple = async (orders: any[], type: "invoice" | "salesReceipt") => {
+    if (orders.length === 0) return;
+    if (orders.length === 1) { handleAction(orders[0], type); return; }
+    setModalProcessing(true);
+    try {
+      const firstOrder = orders[0];
+      const orgId = typeof window !== 'undefined' ? localStorage.getItem("activeOrgId") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (orgId) headers["x-organization-id"] = orgId;
+
+      // Contact lookup from first order
+      let dubblContactId: string | undefined;
+      const contactName = firstOrder.customerSnapshot?.name;
+      if (contactName && contactName !== 'Guest') {
+        const searchRes = await fetch(`/api/v1/contacts?search=${encodeURIComponent(contactName)}&limit=1`, { headers });
+        if (searchRes.ok) {
+          const sd = await searchRes.json();
+          if (sd.data && sd.data.length > 0) dubblContactId = sd.data[0].id;
+        }
+        if (!dubblContactId) {
+          const cr = await fetch("/api/v1/contacts", { method: "POST", headers, body: JSON.stringify({ name: contactName, phone: firstOrder.customerSnapshot?.phone || null, type: "customer" }) });
+          if (cr.ok) { const cd = await cr.json(); if (cd.contact) dubblContactId = cd.contact.id; }
+        }
+      }
+
+      let dubblTaxRates: any[] = [];
+      try { const tr = await fetch("/api/v1/tax-rates", { headers }); if (tr.ok) { const td = await tr.json(); dubblTaxRates = td.taxRates || []; } } catch {}
+
+      let dubblInventory: any[] = [];
+      try { const ir = await fetch("/api/v1/inventory?limit=1000", { headers }); if (ir.ok) { const id2 = await ir.json(); dubblInventory = id2.data || []; } } catch {}
+
+      const parseJson = (val: any) => { if (typeof val === 'string') { try { return JSON.parse(val); } catch { return null; } } return val; };
+
+      // Merge line items from all selected orders
+      const allLines: any[] = [];
+      for (const order of orders) {
+        const parsedItems = parseJson(order.items) || [];
+        const parsedAmounts = parseJson(order.amounts) || {};
+        const orderGstDecimal = ((Number(order.cgst_percentage || 0) + Number(order.sgst_percentage || 0)) || Number(order.igst_percentage || 0)) / 100;
+
+        const lines = parsedItems.map((i: any) => {
+          const rawWidth = Number(i.specs?.width ?? i.width ?? 0);
+          const rawHeight = Number(i.specs?.height ?? i.height ?? 0);
+          const widthUnit = i.specs?.widthUnit ?? "FT";
+          const heightUnit = i.specs?.heightUnit ?? "FT";
+          const widthFt = widthUnit === "IN" ? rawWidth / 12 : rawWidth;
+          const heightFt = heightUnit === "IN" ? rawHeight / 12 : rawHeight;
+          const qty = Number(i.specs?.quantity ?? i.quantity ?? 1);
+          const pricingSnap = parseJson(i.pricingSnapshot ?? i.pricing_snapshot) || {};
+          const eyeletType = pricingSnap.selectedEyeletType ?? "NONE";
+          const eyeletRate = Number(pricingSnap.eyeletRate ?? 0);
+          const eyeletCount = eyeletType !== "NONE" ? qty : 0;
+          const finishAmount = (eyeletCount * eyeletRate).toFixed(2);
+          let gstDecimal = Number(pricingSnap.tax ?? 0);
+          if (gstDecimal === 0 && orderGstDecimal > 0) gstDecimal = orderGstDecimal;
+          else if (gstDecimal === 0) gstDecimal = 0.18;
+          const gstBasisPts = Math.round(gstDecimal * 10000);
+          const matchedTax = dubblTaxRates.find((t: any) => t.rate === gstBasisPts);
+          const matchedInventory = dubblInventory.find((inv: any) => inv.name.toLowerCase() === (i.productName || "").toLowerCase());
+          let desc = i.productName || "Custom Print";
+          if (widthFt > 0 && heightFt > 0) desc += ` (${widthFt} FT x ${heightFt} FT)`;
+          if (eyeletCount > 0) desc += ` + ${eyeletCount} ${eyeletType.toLowerCase()} eyelets`;
+          const baseRate = parseFloat((pricingSnap.baseRate ?? i.unitPrice ?? i.price ?? i.rate ?? 0).toString()) || 0;
+          const totalFinish = parseFloat(finishAmount || "0");
+          return { description: desc, quantity: qty.toString(), unitPrice: baseRate.toFixed(2), accountId: "", taxRateId: matchedTax?.id ?? "", inventoryItemId: matchedInventory?.id ?? "", width: widthFt > 0 ? widthFt.toString() : "", length: heightFt > 0 ? heightFt.toString() : "", finishAmount: totalFinish > 0 ? totalFinish.toFixed(2) : "" };
+        });
+        if (lines.length === 0) lines.push({ description: "Custom Print Order", quantity: "1", unitPrice: (parseJson(order.amounts)?.grandTotal ?? 0).toString(), accountId: "", taxRateId: "" });
+        allLines.push(...lines);
+
+        // Logistics per order
+        const deliveryCharge = Number(order.allocated_logistics_amount ?? parseJson(order.amounts)?.transport ?? 0);
+        if (deliveryCharge > 0) allLines.push({ description: "Logistics / Shipping", quantity: "1", unitPrice: deliveryCharge.toFixed(2), accountId: "", taxRateId: "" });
+      }
+
+      let orderDelivery: any = {};
+      if (firstOrder.delivery) { try { orderDelivery = typeof firstOrder.delivery === "string" ? JSON.parse(firstOrder.delivery) : firstOrder.delivery; } catch {} }
+
+      // Reference = parent order ID
+      const parentRef = firstOrder.parent_order_id || orders.map(o => o.id).join(",");
+
+      openDrawer(type, { reference: parentRef, contactId: dubblContactId, lines: type === "invoice" ? allLines : undefined, deliveryMode: orderDelivery.choice || undefined, deliveryAddress: orderDelivery.address || undefined });
+      setSiblingsModal(null);
+    } catch (err) {
+      console.error("Failed multi-order action", err);
+      openDrawer(type, { reference: orders[0].id });
+      setSiblingsModal(null);
+    } finally {
+      setModalProcessing(false);
     }
   };
 
@@ -489,8 +583,21 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
                               </button>
                               <div className="flex flex-col gap-1 w-full max-w-[80px]">
                                 <button
-                                  disabled={processingOrderId === order.id}
-                                  onClick={() => handleAction(order, "invoice")}
+                                  disabled={processingOrderId === order.id || modalProcessing}
+                                  onClick={() => {
+                                    const parentId = order.parent_order_id || order.baseOrderId;
+                                    if (parentId) {
+                                      const siblings = initialOrders.filter((o: any) =>
+                                        o.parent_order_id === parentId || o.baseOrderId === parentId
+                                      );
+                                      if (siblings.length > 1) {
+                                        setSiblingsModal({ orders: siblings, parentId });
+                                        setSelectedSiblingIds(new Set([order.id]));
+                                        return;
+                                      }
+                                    }
+                                    handleAction(order, "invoice");
+                                  }}
                                   className="w-full text-center text-[9px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:bg-indigo-100 bg-indigo-50 rounded py-1 cursor-pointer whitespace-nowrap transition-colors disabled:opacity-50"
                                   title="Generate Invoice"
                                 >
@@ -519,5 +626,94 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
         </div>
       </div>
     </div>
+
+    {/* ── Sibling Selection Modal ── */}
+    {siblingsModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <FileText size={16} className="text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Select Items to Invoice</p>
+                <p className="text-[10px] text-slate-400 font-medium">Parent: {siblingsModal.parentId}</p>
+              </div>
+            </div>
+            <button onClick={() => setSiblingsModal(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Items list */}
+          <div className="px-5 py-3 flex flex-col gap-2 max-h-72 overflow-y-auto">
+            {siblingsModal.orders.map((o: any) => {
+              const parsedItems = (() => { try { return typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch { return []; } })();
+              const parsedAmounts = (() => { try { return typeof o.amounts === 'string' ? JSON.parse(o.amounts) : (o.amounts || {}); } catch { return {}; } })();
+              const grandTotal = o.grand_total_snapshot || parsedAmounts.grandTotal || 0;
+              const productName = o.productName || parsedItems[0]?.productName || 'Custom Print';
+              const isSelected = selectedSiblingIds.has(o.id);
+              return (
+                <label key={o.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => {
+                      setSelectedSiblingIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(o.id)) next.delete(o.id); else next.add(o.id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 accent-indigo-600 rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-slate-800 truncate">{productName}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">{o.id}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs font-black text-slate-900">₹{Number(grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-[9px] text-slate-400 uppercase">{o.gst_type || 'GST'}</p>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          {/* Summary footer */}
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
+            {(() => {
+              const selectedOrders = siblingsModal.orders.filter((o: any) => selectedSiblingIds.has(o.id));
+              const total = selectedOrders.reduce((sum: number, o: any) => {
+                const pa = (() => { try { return typeof o.amounts === 'string' ? JSON.parse(o.amounts) : (o.amounts || {}); } catch { return {}; } })();
+                return sum + Number(o.grand_total_snapshot || pa.grandTotal || 0);
+              }, 0);
+              return (
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-slate-500">{selectedSiblingIds.size} item{selectedSiblingIds.size !== 1 ? 's' : ''} selected</span>
+                  <span className="text-sm font-black text-slate-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              );
+            })()}
+            <div className="flex gap-2">
+              <button onClick={() => setSiblingsModal(null)} className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+              <button
+                disabled={selectedSiblingIds.size === 0 || modalProcessing}
+                onClick={() => {
+                  const selected = siblingsModal.orders.filter((o: any) => selectedSiblingIds.has(o.id));
+                  handleActionMultiple(selected, "invoice");
+                }}
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {modalProcessing ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                Generate Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }

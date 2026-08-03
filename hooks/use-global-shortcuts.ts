@@ -65,15 +65,15 @@ export function useGlobalShortcuts() {
           if (e.key === 'F4') {
             router.push('/accounting/banking');
           } else if (e.key === 'F5') {
-            router.push('/purchases/payments/new');
+            router.push('/purchases');
           } else if (e.key === 'F6') {
             router.push('/sales/customer-prepayments');
           } else if (e.key === 'F7') {
-            router.push('/accounting/new');
+            router.push('/accounting');
           } else if (e.key === 'F8') {
-            router.push('/sales/invoices/new');
+            router.push('/sales');
           } else if (e.key === 'F10') {
-            router.push('/sales/quotes');
+            window.location.href = 'http://localhost:3000/quotation-builder';
           }
           closeMenu();
         }

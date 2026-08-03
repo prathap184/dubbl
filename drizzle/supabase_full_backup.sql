@@ -1,7 +1,8 @@
 -- =============================================================================
 -- Supabase Database Full Backup (Schema, Auth, and Data)
 -- Source: https://dijmmkbfdgevnxbbnmbj.supabase.co
--- Generated at: 2026-07-31T13:37:49.649Z
+-- Generated at: 2026-07-31T13:37:49.649Zgit add lib/db/seed.ts
+
 -- =============================================================================
 
 -- ====================================
