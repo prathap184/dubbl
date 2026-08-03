@@ -361,19 +361,21 @@ export default function DayBookPage() {
                         <tr className="bg-slate-900/40 border-b border-slate-700/40">
                           <td colSpan={7} className="px-8 py-3 bg-slate-900/30 text-slate-300 text-xs">
                             <div className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/50">
-                              {/* Line items if any */}
+                              {/* Ledger Account Lines */}
                               {record.items && record.items.length > 0 && (
                                 <div>
-                                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Line Items:</span>
+                                  <span className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Ledger Account Splits:</span>
                                   <div className="mt-1 space-y-1">
                                     {record.items.map((it: any, i: number) => (
-                                      <div key={i} className="flex justify-between items-center text-[11px] font-mono bg-slate-800/40 px-3 py-1.5 rounded-xl border border-slate-700/30">
+                                      <div key={i} className="flex justify-between items-center text-[11px] font-mono bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-700/50">
                                         <span className="font-semibold text-slate-200">
-                                          {it.description} {it.width > 0 && `(${it.width} FT x ${it.length} FT)`}
+                                          {it.accountCode && <span className="text-indigo-400 font-bold mr-2">{it.accountCode}</span>}
+                                          {it.accountName || it.description}
                                         </span>
-                                        <span className="text-slate-400">
-                                          Qty: {it.quantity} &times; ₹{it.unitPrice?.toFixed(2)} = <strong className="text-slate-200">₹{it.amount?.toFixed(2)}</strong>
-                                        </span>
+                                        <div className="flex items-center gap-4 text-xs">
+                                          {it.debit > 0 && <span className="text-emerald-400 font-bold">Dr: ₹{it.debit.toFixed(2)}</span>}
+                                          {it.credit > 0 && <span className="text-rose-400 font-bold">Cr: ₹{it.credit.toFixed(2)}</span>}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
