@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { 
-  invoice, payment, bill, expense, entry, 
+  invoice, payment, bill, expenseClaim, journalEntry, 
   creditNote, debitNote, bankTransaction, customerCredit
 } from "@/lib/db/schema";
-import { eq, and, gte, lte, isNull, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, isNull, sql } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { handleError } from "@/lib/api/response";
 
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       bills,
       creditNotes,
       debitNotes,
-      journalEntries,
+      entries,
     ] = await Promise.all([
       db.query.invoice.findMany({
         where: and(
@@ -75,14 +75,12 @@ export async function GET(request: Request) {
         ),
         with: { contact: true },
       }),
-      db.query.expense.findMany({
+      db.query.expenseClaim.findMany({
         where: and(
-          eq(expense.organizationId, ctx.organizationId),
-          gte(expense.date, dateOnlyStr),
-          lte(expense.date, dateOnlyStr),
-          isNull(expense.deletedAt)
+          eq(expenseClaim.organizationId, ctx.organizationId),
+          gte(expenseClaim.createdAt, startOfDay),
+          isNull(expenseClaim.deletedAt)
         ),
-        with: { contact: true },
       }),
       db.query.bill.findMany({
         where: and(
@@ -111,12 +109,12 @@ export async function GET(request: Request) {
         ),
         with: { contact: true, lines: true },
       }),
-      db.query.entry.findMany({
+      db.query.journalEntry.findMany({
         where: and(
-          eq(entry.organizationId, ctx.organizationId),
-          gte(entry.date, dateOnlyStr),
-          lte(entry.date, dateOnlyStr),
-          isNull(entry.deletedAt)
+          eq(journalEntry.organizationId, ctx.organizationId),
+          gte(journalEntry.date, dateOnlyStr),
+          lte(journalEntry.date, dateOnlyStr),
+          isNull(journalEntry.deletedAt)
         ),
         with: { lines: true },
       }),
@@ -210,25 +208,24 @@ export async function GET(request: Request) {
 
     // Expenses & Vendor Payments
     for (const exp of expenses) {
-      const rate = exp.exchangeRate ? Number(exp.exchangeRate) : 1;
-      const amt = (exp.amount / 100) * rate;
-      const isVoid = exp.status === "void";
+      const amt = (exp.totalAmount / 100);
+      const isVoid = exp.status === "rejected";
 
       records.push({
         id: exp.id,
         timestamp: new Date(exp.createdAt).getTime(),
-        date: exp.date,
-        voucherType: "Payment Voucher",
-        voucherNo: exp.expenseNumber,
-        partyName: exp.contact?.name || exp.category || "Vendor",
+        date: dateOnlyStr,
+        voucherType: "Expense Claim",
+        voucherNo: exp.title || "EXPENSE",
+        partyName: exp.description || "Employee Expense",
         debitAmount: 0,
         creditAmount: isVoid ? 0 : amt, // Credit Cash / Bank
         status: exp.status,
         isVoid,
-        notes: exp.notes || null,
+        notes: exp.description || null,
         taxDetails: { cgst: 0, sgst: 0, igst: 0 },
         items: [],
-        link: `/purchases/expenses/${exp.id}`,
+        link: `/purchases/expenses`,
       });
     }
 
@@ -332,8 +329,7 @@ export async function GET(request: Request) {
     }
 
     // Journal & Contra Entries
-    for (const ent of journalEntries) {
-      const amt = (ent.amount || 0) / 100;
+    for (const ent of entries) {
       records.push({
         id: ent.id,
         timestamp: new Date(ent.createdAt).getTime(),
@@ -341,15 +337,15 @@ export async function GET(request: Request) {
         voucherType: "Journal Entry",
         voucherNo: ent.entryNumber,
         partyName: ent.description || "General Adjustment",
-        debitAmount: amt,
-        creditAmount: amt,
-        status: "posted",
-        isVoid: false,
+        debitAmount: (ent.totalDebit || 0) / 100,
+        creditAmount: (ent.totalCredit || 0) / 100,
+        status: ent.status || "posted",
+        isVoid: ent.status === "void",
         notes: ent.description || null,
         taxDetails: { cgst: 0, sgst: 0, igst: 0 },
         items: ent.lines?.map((l: any) => ({
-          description: l.description || "Ledger Entry",
-          amount: (l.amount || 0) / 100,
+          description: l.description || "Ledger Line",
+          amount: (l.debit || l.credit || 0) / 100,
         })),
         link: `/accounting/entries/${ent.id}`,
       });
