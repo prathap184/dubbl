@@ -357,6 +357,7 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
   const totalCompleted = baseOrders.length - totalActive;
 
   return (
+    <>
     <div className="min-h-screen bg-slate-100 rounded-3xl overflow-hidden relative border border-slate-200">
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-blue-50/50 opacity-50"></div>
       
@@ -715,5 +716,6 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
         </div>
       </div>
     )}
+    </>
   );
 }
