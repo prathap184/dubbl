@@ -65,6 +65,18 @@ export function ShortcutMenu() {
                 router.push('/reports/day-book');
                 closeMenu();
               }} />
+              <ShortcutItem hotkey="G" label="General Ledger" onClick={() => {
+                router.push('/reports/general-ledger');
+                closeMenu();
+              }} />
+              <ShortcutItem hotkey="C" label="Customer Ledger" onClick={() => {
+                router.push('/contacts?type=customer');
+                closeMenu();
+              }} />
+              <ShortcutItem hotkey="S" label="Supplier Ledger" onClick={() => {
+                router.push('/contacts?type=supplier');
+                closeMenu();
+              }} />
               <ShortcutItem hotkey="A" label="Account Books" hasChildren onClick={() => setMenuState('ACCOUNT_BOOKS')} />
             </div>
           )}
@@ -78,6 +90,9 @@ export function ShortcutMenu() {
           {menuState === 'LEDGERS' && (
             <div className="grid grid-cols-1 gap-2">
               <ShortcutItem hotkey="D" label="Day Book" onClick={() => { router.push('/reports/day-book'); closeMenu(); }} />
+              <ShortcutItem hotkey="G" label="General Ledger" onClick={() => { router.push('/reports/general-ledger'); closeMenu(); }} />
+              <ShortcutItem hotkey="C" label="Customer Ledger" onClick={() => { router.push('/contacts?type=customer'); closeMenu(); }} />
+              <ShortcutItem hotkey="S" label="Supplier Ledger" onClick={() => { router.push('/contacts?type=supplier'); closeMenu(); }} />
               <ShortcutItem hotkey="A" label="Chart of Accounts" onClick={() => { router.push('/accounting/accounts'); closeMenu(); }} />
               <ShortcutItem hotkey="B" label="Bank Accounts" onClick={() => { router.push('/accounting/banking'); closeMenu(); }} />
             </div>

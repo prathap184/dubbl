@@ -265,13 +265,17 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
 
 export default function ContactsPage() {
   const router = useRouter();
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const rawType = searchParams?.get("type") || searchParams?.get("tab") || "";
+  const initialType = rawType.includes("customer") ? "customer" : rawType.includes("supplier") ? "supplier" : "all";
+
   const { open: openDrawer } = useCreateDrawer();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState(initialType);
   const [sortBy, setSortBy] = useState("created");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateFrom, setDateFrom] = useState("");
