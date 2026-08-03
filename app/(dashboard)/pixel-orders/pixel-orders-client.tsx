@@ -310,16 +310,18 @@ export function PixelOrdersClient({ initialOrders }: { initialOrders: any[] }) {
     }
   };
 
-  // Filter single standalone orders or parent orders
+  // Filter out umbrella parent orders when child items exist
   const baseOrders = useMemo(() => {
-    const baseOrderIdSet = new Set(initialOrders.map((o: any) => o.baseOrderId).filter(Boolean));
+    const parentIdSet = new Set(
+      initialOrders
+        .map((o: any) => o.parent_order_id || o.parentOrderId || o.baseOrderId)
+        .filter(Boolean)
+    );
     return initialOrders.filter((o: any) => {
-      const hasBaseOrderId = !!o.baseOrderId;          // is a child item
-      const isUmbrellaParent = baseOrderIdSet.has(o.id);        // its ID is used as baseOrderId by others
+      const isParentOfChildren = parentIdSet.has(o.id);
       const hasGroupChildren = Array.isArray(o.workflow?.groupOrderIds) && o.workflow.groupOrderIds.length > 0;
-      if (hasBaseOrderId) return true;            // always show child items
-      if (isUmbrellaParent || hasGroupChildren) return false;  // hide umbrella parents
-      return true;                                // standalone single-item order
+      if (isParentOfChildren || hasGroupChildren) return false; // Hide parent order if children exist
+      return true;
     });
   }, [initialOrders]);
 
