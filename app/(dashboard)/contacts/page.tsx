@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useDocumentTitle } from "@/lib/hooks/use-document-title";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Users, Search, Loader2, MoreHorizontal, Trash2, ExternalLink, UserPlus, Building2, Truck, ArrowRight, X, Target, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
@@ -160,7 +160,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
       render: (r) => (
         <span className="text-sm tabular-nums">
           {r.overdue && r.overdue > 0 ? (
-            <span className="font-semibold text-red-600 dark:text-red-400">
+            <span className="font-semibold text-destructive">
               {formatMoney(r.overdue, r.currencyCode || "INR")}
             </span>
           ) : (
@@ -170,11 +170,11 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
       ),
     },
     {
-      key: "taxExempt",
+      key: "isTaxExempt",
       header: "Tax",
-      className: "w-32 text-center",
+      className: "w-20 text-center",
       render: (r) => (
-        <div className="flex flex-wrap items-center justify-center gap-1">
+        <div className="flex justify-center">
           {r.isTaxExempt && (
             <Badge
               variant="outline"
@@ -233,8 +233,8 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
-              className="size-7 p-0"
+              size="icon"
+              className="size-8"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
@@ -265,8 +265,8 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
 
 export default function ContactsPage() {
   const router = useRouter();
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const rawType = searchParams?.get("type") || searchParams?.get("tab") || "";
+  const searchParams = useSearchParams();
+  const rawType = searchParams.get("type") || searchParams.get("tab") || "";
   const initialType = rawType.includes("customer") ? "customer" : rawType.includes("supplier") ? "supplier" : "all";
 
   const { open: openDrawer } = useCreateDrawer();
@@ -276,6 +276,18 @@ export default function ContactsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
   const [typeFilter, setTypeFilter] = useState(initialType);
+
+  useEffect(() => {
+    const param = searchParams.get("type") || searchParams.get("tab") || "";
+    if (param.includes("customer")) {
+      setTypeFilter("customer");
+    } else if (param.includes("supplier")) {
+      setTypeFilter("supplier");
+    } else if (param === "all") {
+      setTypeFilter("all");
+    }
+  }, [searchParams]);
+
   const [sortBy, setSortBy] = useState("created");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateFrom, setDateFrom] = useState("");
