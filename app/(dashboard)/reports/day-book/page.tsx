@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  Calendar, ChevronLeft, ChevronRight, FileText, ArrowUpRight, 
-  ArrowDownLeft, Filter, Download, Printer, Layers, Eye, EyeOff, CheckCircle2, AlertCircle, RefreshCw
+  Calendar, ChevronLeft, ChevronRight, Download, Printer, ArrowUpRight, Filter, Eye, RefreshCw
 } from 'lucide-react';
 
 export default function DayBookPage() {
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [voucherFilter, setVoucherFilter] = useState<string>('ALL');
-  const [detailedView, setDetailedView] = useState<boolean>(false);
+  const [themeMode, setThemeMode] = useState<'tally-classic' | 'tally-dark'>('tally-classic');
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<any>(null);
 
@@ -51,196 +50,106 @@ export default function DayBookPage() {
 
   const filteredRecords = (data?.records || []).filter((r: any) => {
     if (voucherFilter === 'ALL') return true;
-    if (voucherFilter === 'INVOICE') return r.voucherType.includes('Sales Invoice');
+    if (voucherFilter === 'INVOICE') return r.voucherType.includes('Invoice');
     if (voucherFilter === 'RECEIPT') return r.voucherType.includes('Receipt');
     if (voucherFilter === 'PREPAYMENT') return r.voucherType.includes('Prepayment');
-    if (voucherFilter === 'EXPENSE') return r.voucherType.includes('Payment');
-    if (voucherFilter === 'BILL') return r.voucherType.includes('Purchase');
+    if (voucherFilter === 'EXPENSE') return r.voucherType.includes('Payment') || r.voucherType.includes('Expense');
+    if (voucherFilter === 'PURCHASE') return r.voucherType.includes('Purchase') || r.voucherType.includes('Bill');
     if (voucherFilter === 'CREDIT_NOTE') return r.voucherType.includes('Credit Note');
     if (voucherFilter === 'DEBIT_NOTE') return r.voucherType.includes('Debit Note');
-    if (voucherFilter === 'JOURNAL') return r.voucherType.includes('Journal');
+    if (voucherFilter === 'JOURNAL') return r.voucherType.includes('Journal') || r.voucherType.includes('COGS');
     return true;
   });
 
   const formattedDate = new Intl.DateTimeFormat('en-IN', {
-    weekday: 'short',
-    day: '2-digit',
+    day: 'numeric',
     month: 'short',
     year: 'numeric'
   }).format(new Date(selectedDate + 'T00:00:00Z'));
 
-  const exportCSV = () => {
-    if (!data?.records) return;
-    const headers = ['Date', 'Voucher Type', 'Voucher No', 'Party Name', 'Debit (INR)', 'Credit (INR)', 'Status'];
-    const rows = filteredRecords.map((r: any) => [
-      r.date,
-      `"${r.voucherType}"`,
-      `"${r.voucherNo}"`,
-      `"${r.partyName.replace(/"/g, '""')}"`,
-      r.debitAmount.toFixed(2),
-      r.creditAmount.toFixed(2),
-      r.status
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e: any) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `day-book-${selectedDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const isClassic = themeMode === 'tally-classic';
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-6 flex flex-col gap-6 font-sans">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 p-5 rounded-3xl shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center text-indigo-400 shadow-inner">
-            <FileText size={24} />
+    <div className={`min-h-screen p-4 font-mono transition-colors duration-200 ${
+      isClassic 
+        ? 'bg-[#f4ebd0] text-[#1a231b]' 
+        : 'bg-[#0f172a] text-slate-100'
+    }`}>
+      {/* Tally ERP Header Bar */}
+      <div className={`border-2 rounded-t-lg shadow-md overflow-hidden ${
+        isClassic ? 'border-[#1b4332] bg-[#1b4332] text-white' : 'border-slate-700 bg-slate-900 text-slate-100'
+      }`}>
+        <div className="px-4 py-2 flex items-center justify-between font-bold text-sm tracking-wider uppercase border-b border-emerald-700/50">
+          <div className="flex items-center gap-3">
+            <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded text-xs font-black">TALLY ERP 9</span>
+            <span>Day Book</span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tight text-white uppercase">Day Book</h1>
-              <span className="text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">
-                TALLY JOURNAL
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Daily chronological audit of all vouchers, receipts, prepayments & payments.
-            </p>
+          <div className="text-center font-black tracking-widest text-emerald-200">
+            DEMO COMPANY
+          </div>
+          <div className="text-xs font-normal text-emerald-200">
+            {formattedDate}
           </div>
         </div>
 
-        {/* Date Selector & Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Picker Bar */}
-          <div className="flex items-center bg-slate-900/80 border border-slate-700/80 rounded-2xl p-1 shadow-inner">
+        {/* Date Selector Toolbar */}
+        <div className={`px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs border-t ${
+          isClassic ? 'bg-[#2d6a4f] text-emerald-100 border-emerald-600' : 'bg-slate-800 text-slate-300 border-slate-700'
+        }`}>
+          <div className="flex items-center gap-2">
             <button
               onClick={handlePrevDay}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-              title="Previous Day"
+              className="px-2 py-1 bg-black/20 hover:bg-black/40 rounded border border-white/20 font-bold flex items-center gap-1"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={14} /> Prev Day
             </button>
-
-            <div className="flex items-center gap-2 px-3">
-              <Calendar size={16} className="text-indigo-400" />
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded border border-white/20">
+              <Calendar size={14} />
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-sm font-bold text-slate-200 outline-none cursor-pointer"
+                className="bg-transparent font-bold outline-none cursor-pointer text-white"
               />
             </div>
-
             <button
               onClick={handleNextDay}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-              title="Next Day"
+              className="px-2 py-1 bg-black/20 hover:bg-black/40 rounded border border-white/20 font-bold flex items-center gap-1"
             >
-              <ChevronRight size={18} />
+              Next Day <ChevronRight size={14} />
             </button>
           </div>
 
-          <button
-            onClick={() => setDetailedView(!detailedView)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold border transition-all ${
-              detailedView 
-                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/30' 
-                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-            }`}
-          >
-            {detailedView ? <Eye size={14} /> : <EyeOff size={14} />}
-            {detailedView ? 'Detailed View (F12)' : 'Condensed View'}
-          </button>
-
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-2xl text-xs font-bold transition-colors"
-          >
-            <Download size={14} />
-            CSV
-          </button>
-
-          <button
-            onClick={() => fetchDayBook(selectedDate)}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-2xl transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
-
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Opening Balance */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-3xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Opening Balance</span>
-            <Layers size={16} className="text-slate-500" />
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-slate-100 font-mono">
-              ₹{(data?.openingBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">Cash & Bank balance at 00:00</p>
-          </div>
-        </div>
-
-        {/* Total Debits (Inflow / AR) */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-3xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between text-emerald-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Debits (Inflow)</span>
-            <ArrowDownLeft size={18} className="text-emerald-400" />
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-emerald-400 font-mono">
-              ₹{(data?.summary?.totalDebits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">Sales, Receipts & Prepayments</p>
-          </div>
-        </div>
-
-        {/* Total Credits (Outflow / Expenses) */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-3xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between text-rose-400">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Credits (Outflow)</span>
-            <ArrowUpRight size={18} className="text-rose-400" />
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-rose-400 font-mono">
-              ₹{(data?.summary?.totalCredits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">Expenses, Vendor Bills & Payouts</p>
-          </div>
-        </div>
-
-        {/* Closing Balance */}
-        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-3xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between text-indigo-300">
-            <span className="text-xs font-bold uppercase tracking-wider">Closing Balance</span>
-            <CheckCircle2 size={18} className="text-indigo-400" />
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-indigo-300 font-mono">
-              ₹{(data?.closingBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-indigo-400/70 mt-1">Estimated Net position at 23:59</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setThemeMode(isClassic ? 'tally-dark' : 'tally-classic')}
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded shadow transition-colors"
+            >
+              {isClassic ? '🌙 Dark Tally Theme' : '📜 Classic Tally Theme'}
+            </button>
+            <button
+              onClick={() => fetchDayBook(selectedDate)}
+              className="p-1.5 bg-black/20 hover:bg-black/40 rounded border border-white/20"
+              title="Refresh"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className={`flex items-center gap-1 overflow-x-auto p-2 border-x-2 text-xs font-bold ${
+        isClassic ? 'bg-[#e9d8a6] border-[#1b4332] text-slate-900' : 'bg-slate-900/90 border-slate-700 text-slate-300'
+      }`}>
+        <span className="text-[10px] uppercase tracking-wider mr-2 text-slate-600">Filter Vouchers:</span>
         {[
-          { id: 'ALL', label: 'All Vouchers' },
+          { id: 'ALL', label: 'All' },
           { id: 'INVOICE', label: 'Sales Invoices' },
           { id: 'RECEIPT', label: 'Receipts' },
           { id: 'PREPAYMENT', label: 'Prepayments' },
-          { id: 'EXPENSE', label: 'Expenses' },
-          { id: 'BILL', label: 'Vendor Bills' },
+          { id: 'EXPENSE', label: 'Payments / Expenses' },
+          { id: 'PURCHASE', label: 'Purchases' },
           { id: 'CREDIT_NOTE', label: 'Credit Notes' },
           { id: 'DEBIT_NOTE', label: 'Debit Notes' },
           { id: 'JOURNAL', label: 'Journals' },
@@ -248,10 +157,10 @@ export default function DayBookPage() {
           <button
             key={tab.id}
             onClick={() => setVoucherFilter(tab.id)}
-            className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 rounded border transition-colors whitespace-nowrap ${
               voucherFilter === tab.id
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 border border-indigo-500'
-                : 'bg-slate-800/80 text-slate-400 border border-slate-700/60 hover:bg-slate-700/80 hover:text-slate-200'
+                ? (isClassic ? 'bg-[#1b4332] text-white border-[#1b4332]' : 'bg-indigo-600 text-white border-indigo-500')
+                : (isClassic ? 'bg-[#f4ebd0] text-[#1a231b] border-[#bb9457] hover:bg-[#e0c9a6]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white')
             }`}
           >
             {tab.label}
@@ -259,157 +168,123 @@ export default function DayBookPage() {
         ))}
       </div>
 
-      {/* Main Day Book Table */}
-      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between bg-slate-800/40">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-black uppercase tracking-wider text-slate-200">
-              Journal Entries for {formattedDate}
-            </h2>
-            <span className="text-xs font-bold text-slate-400 bg-slate-700/50 border border-slate-600/50 px-2 py-0.5 rounded-full">
-              {filteredRecords.length} Vouchers
-            </span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-700/60 bg-slate-900/60 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Voucher Type</th>
-                <th className="px-6 py-4">Voucher No</th>
-                <th className="px-6 py-4">Particulars / Party</th>
-                <th className="px-6 py-4 text-right">Debit (₹)</th>
-                <th className="px-6 py-4 text-right">Credit (₹)</th>
-                <th className="px-6 py-4 text-center">Action</th>
+      {/* Main Tally Day Book Table */}
+      <div className={`border-2 border-t-0 rounded-b-lg shadow-xl overflow-hidden ${
+        isClassic ? 'border-[#1b4332] bg-[#fdfaf1]' : 'border-slate-700 bg-slate-900'
+      }`}>
+        <table className="w-full text-left border-collapse font-mono text-xs">
+          <thead>
+            <tr className={`border-b-2 font-bold uppercase tracking-wider ${
+              isClassic ? 'bg-[#d8c3a5] text-[#1b4332] border-[#1b4332]' : 'bg-slate-800 text-slate-200 border-slate-700'
+            }`}>
+              <th className="px-4 py-2.5 w-28 border-r border-slate-400/30">Date</th>
+              <th className="px-4 py-2.5 border-r border-slate-400/30">Particulars</th>
+              <th className="px-4 py-2.5 w-36 border-r border-slate-400/30">Vch Type</th>
+              <th className="px-4 py-2.5 w-24 text-center border-r border-slate-400/30">Vch No.</th>
+              <th className="px-4 py-2.5 w-36 text-right border-r border-slate-400/30">Debit Amount (₹)</th>
+              <th className="px-4 py-2.5 w-36 text-right">Credit Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-400/20">
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-bold">
+                  <RefreshCw size={24} className="animate-spin inline mb-2" />
+                  <p>Loading Tally Day Book Vouchers...</p>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/40 text-xs">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    <RefreshCw size={24} className="animate-spin inline mb-2 text-indigo-400" />
-                    <p className="font-bold">Loading Day Book records...</p>
-                  </td>
-                </tr>
-              ) : filteredRecords.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                    <AlertCircle size={28} className="inline mb-2 text-slate-600" />
-                    <p className="font-bold text-sm text-slate-400">No vouchers recorded on {formattedDate}</p>
-                    <p className="text-xs text-slate-500 mt-1">Try selecting another date or filter.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredRecords.map((record: any, idx: number) => {
-                  const isSales = record.voucherType.includes('Sales Invoice');
-                  const isReceipt = record.voucherType.includes('Receipt');
-                  const isPrepayment = record.voucherType.includes('Prepayment');
-                  const isExpense = record.voucherType.includes('Payment');
-                  const isBill = record.voucherType.includes('Purchase');
+            ) : filteredRecords.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-bold">
+                  No vouchers recorded on {formattedDate}.
+                </td>
+              </tr>
+            ) : (
+              filteredRecords.map((record: any, idx: number) => {
+                const isHoverClassic = 'hover:bg-[#e9d8a6] hover:text-[#1b4332]';
+                const isHoverDark = 'hover:bg-slate-800/80';
 
-                  return (
-                    <React.Fragment key={`${record.id}-${idx}`}>
-                      <tr className={`hover:bg-slate-700/30 transition-colors ${record.isVoid ? 'opacity-40 bg-rose-950/10' : ''}`}>
-                        <td className="px-6 py-4 font-mono font-medium text-slate-300 whitespace-nowrap">
-                          {record.date}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                            isSales ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' :
-                            isReceipt ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                            isPrepayment ? 'bg-teal-500/10 text-teal-300 border-teal-500/30' :
-                            isExpense ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
-                            isBill ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                            'bg-slate-700 text-slate-300 border-slate-600'
-                          }`}>
-                            {record.voucherType}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono font-bold text-white whitespace-nowrap">
-                          {record.voucherNo}
-                        </td>
-                        <td className="px-6 py-4 font-semibold text-slate-200">
-                          <p title={record.partyName}>{record.partyName}</p>
-                          {record.notes && !detailedView && (
-                            <p className="text-[10px] text-slate-400 font-normal italic truncate max-w-xs">{record.notes}</p>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-emerald-400 whitespace-nowrap">
-                          {record.debitAmount > 0 ? `₹${record.debitAmount.toFixed(2)}` : '—'}
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-rose-400 whitespace-nowrap">
-                          {record.creditAmount > 0 ? `₹${record.creditAmount.toFixed(2)}` : '—'}
-                        </td>
-                        <td className="px-6 py-4 text-center whitespace-nowrap">
-                          {record.link ? (
-                            <Link
+                return (
+                  <React.Fragment key={`${record.id}-${idx}`}>
+                    <tr className={`transition-colors cursor-pointer ${
+                      isClassic ? isHoverClassic : isHoverDark
+                    } ${record.isVoid ? 'opacity-40 italic' : ''}`}>
+                      <td className="px-4 py-2 font-semibold border-r border-slate-400/20 whitespace-nowrap">
+                        {record.date}
+                      </td>
+                      <td className="px-4 py-2 font-bold border-r border-slate-400/20">
+                        <div className="flex items-center justify-between">
+                          <span>{record.partyName}</span>
+                          {record.link && (
+                            <Link 
                               href={record.link}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-700/60 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-600/60 hover:border-indigo-500 text-[10px] font-bold uppercase transition-all shadow-sm"
+                              className="text-[10px] underline font-normal opacity-60 hover:opacity-100"
                             >
-                              View <ArrowUpRight size={12} />
+                              Open
                             </Link>
-                          ) : (
-                            '—'
                           )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 border-r border-slate-400/20 font-semibold whitespace-nowrap">
+                        {record.voucherType}
+                      </td>
+                      <td className="px-4 py-2 text-center border-r border-slate-400/20 font-bold whitespace-nowrap">
+                        {record.voucherNo}
+                      </td>
+                      <td className="px-4 py-2 text-right border-r border-slate-400/20 font-bold font-mono text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                        {record.debitAmount > 0 ? record.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}
+                      </td>
+                      <td className="px-4 py-2 text-right font-bold font-mono text-rose-700 dark:text-rose-400 whitespace-nowrap">
+                        {record.creditAmount > 0 ? record.creditAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : ''}
+                      </td>
+                    </tr>
+
+                    {/* Detailed Ledger Breakdown inside Tally row */}
+                    {record.items && record.items.length > 0 && (
+                      <tr className={isClassic ? 'bg-[#f4ebd0]/60' : 'bg-slate-900/60'}>
+                        <td colSpan={6} className="px-8 py-2 text-[11px] border-b border-slate-400/20">
+                          <div className="pl-4 border-l-2 border-emerald-600/50 space-y-1">
+                            {record.items.map((it: any, i: number) => (
+                              <div key={i} className="flex justify-between items-center text-slate-700 dark:text-slate-300">
+                                <span>
+                                  {it.accountCode && <strong className="mr-2 text-emerald-800 dark:text-emerald-400">{it.accountCode}</strong>}
+                                  {it.accountName || it.description}
+                                </span>
+                                <div className="space-x-4 font-mono font-bold">
+                                  {it.debit > 0 && <span className="text-emerald-700 dark:text-emerald-400">Dr ₹{it.debit.toFixed(2)}</span>}
+                                  {it.credit > 0 && <span className="text-rose-700 dark:text-rose-400">Cr ₹{it.credit.toFixed(2)}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </td>
                       </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </tbody>
 
-                      {/* Tally Detailed View Breakdown */}
-                      {detailedView && (
-                        <tr className="bg-slate-900/40 border-b border-slate-700/40">
-                          <td colSpan={7} className="px-8 py-3 bg-slate-900/30 text-slate-300 text-xs">
-                            <div className="flex flex-col gap-2 pl-4 border-l-2 border-indigo-500/50">
-                              {/* Ledger Account Lines */}
-                              {record.items && record.items.length > 0 && (
-                                <div>
-                                  <span className="text-[10px] font-black uppercase text-indigo-400 tracking-wider">Ledger Account Splits:</span>
-                                  <div className="mt-1 space-y-1">
-                                    {record.items.map((it: any, i: number) => (
-                                      <div key={i} className="flex justify-between items-center text-[11px] font-mono bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-700/50">
-                                        <span className="font-semibold text-slate-200">
-                                          {it.accountCode && <span className="text-indigo-400 font-bold mr-2">{it.accountCode}</span>}
-                                          {it.accountName || it.description}
-                                        </span>
-                                        <div className="flex items-center gap-4 text-xs">
-                                          {it.debit > 0 && <span className="text-emerald-400 font-bold">Dr: ₹{it.debit.toFixed(2)}</span>}
-                                          {it.credit > 0 && <span className="text-rose-400 font-bold">Cr: ₹{it.credit.toFixed(2)}</span>}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Tax breakdown */}
-                              {record.taxDetails && (record.taxDetails.cgst > 0 || record.taxDetails.sgst > 0 || record.taxDetails.igst > 0) && (
-                                <div className="flex items-center gap-4 text-[11px] font-mono text-slate-400">
-                                  <span>GST Breakdown:</span>
-                                  {record.taxDetails.cgst > 0 && <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">CGST: ₹{record.taxDetails.cgst.toFixed(2)}</span>}
-                                  {record.taxDetails.sgst > 0 && <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">SGST: ₹{record.taxDetails.sgst.toFixed(2)}</span>}
-                                  {record.taxDetails.igst > 0 && <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">IGST: ₹{record.taxDetails.igst.toFixed(2)}</span>}
-                                </div>
-                              )}
-
-                              {/* Narration */}
-                              {record.notes && (
-                                <div className="text-[11px] text-slate-400 italic">
-                                  <strong className="not-italic text-slate-300 font-mono uppercase text-[9px] mr-1">Memo/Notes:</strong>
-                                  "{record.notes}"
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+          {/* Table Footer Totals */}
+          {filteredRecords.length > 0 && (
+            <tfoot>
+              <tr className={`border-t-2 font-bold uppercase ${
+                isClassic ? 'bg-[#d8c3a5] text-[#1b4332] border-[#1b4332]' : 'bg-slate-800 text-slate-100 border-slate-700'
+              }`}>
+                <td colSpan={4} className="px-4 py-2.5 text-right font-black border-r border-slate-400/30">
+                  Total Daily Debits & Credits:
+                </td>
+                <td className="px-4 py-2.5 text-right font-black font-mono border-r border-slate-400/30 text-emerald-800 dark:text-emerald-400">
+                  ₹{(data?.summary?.totalDebits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="px-4 py-2.5 text-right font-black font-mono text-rose-800 dark:text-rose-400">
+                  ₹{(data?.summary?.totalCredits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
       </div>
     </div>
   );
