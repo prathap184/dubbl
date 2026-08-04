@@ -444,7 +444,7 @@ export default function InvoiceDetailPage() {
     fetch("/api/v1/bank-accounts", { headers: { "x-organization-id": orgId } })
       .then((r) => r.json())
       .then((data) => {
-        if (data.bankAccounts) setBankAccounts(data.bankAccounts.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name })));
+        if (data.bankAccounts) setBankAccounts(data.bankAccounts.map((a: { id: string; accountName: string }) => ({ id: a.id, name: a.accountName })));
       })
       .catch(() => {});
   }, [orgId, payOpen]);
