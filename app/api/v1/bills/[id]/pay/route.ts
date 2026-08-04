@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { bill, payment, paymentAllocation, bankAccount } from "@/lib/db/schema";
+import { bill, payment, paymentAllocation, bankAccount, bankTransaction } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { handleError, notFound } from "@/lib/api/response";
@@ -74,6 +74,30 @@ export async function POST(
     // whole sequence rolls back so we never leave an orphaned payment or a
     // bill marked paid without a ledger entry.
     const { created, updated } = await db.transaction(async (tx) => {
+      // Resolve bank account (from payload or fallback)
+      let selectedBankAccountId = parsed.bankAccountId || null;
+      if (!selectedBankAccountId) {
+        if (parsed.method === "cash") {
+          const cashBank = await tx.query.bankAccount.findFirst({
+            where: and(
+              eq(bankAccount.organizationId, ctx.organizationId),
+              eq(bankAccount.accountType, "cash"),
+              notDeleted(bankAccount.deletedAt)
+            ),
+          });
+          if (cashBank) selectedBankAccountId = cashBank.id;
+        } else {
+          const defaultBank = await tx.query.bankAccount.findFirst({
+            where: and(
+              eq(bankAccount.organizationId, ctx.organizationId),
+              notDeleted(bankAccount.deletedAt)
+            ),
+            orderBy: bankAccount.createdAt,
+          });
+          if (defaultBank) selectedBankAccountId = defaultBank.id;
+        }
+      }
+
       // Create payment record
       const [created] = await tx
         .insert(payment)
@@ -86,7 +110,7 @@ export async function POST(
           amount: parsed.amount,
           method: parsed.method,
           reference: parsed.reference || null,
-          bankAccountId: parsed.bankAccountId || null,
+          bankAccountId: selectedBankAccountId,
           createdBy: ctx.userId,
         })
         .returning();
@@ -101,9 +125,9 @@ export async function POST(
 
       // Determine the correct ledger account code for the journal entry
       let bankAccountCode: string | undefined = undefined;
-      if (parsed.bankAccountId) {
+      if (selectedBankAccountId) {
         const ba = await tx.query.bankAccount.findFirst({
-          where: eq(bankAccount.id, parsed.bankAccountId),
+          where: eq(bankAccount.id, selectedBankAccountId),
           with: { chartAccount: true },
         });
         if (ba?.chartAccount?.code) bankAccountCode = ba.chartAccount.code;
@@ -138,6 +162,21 @@ export async function POST(
           .update(payment)
           .set({ journalEntryId: journalEntry.id })
           .where(eq(payment.id, created.id));
+      }
+
+      // Auto-create bank transaction for the selected bank account so it appears in Banking tab
+      if (selectedBankAccountId) {
+        await tx.insert(bankTransaction).values({
+          bankAccountId: selectedBankAccountId,
+          date: parsed.date,
+          description: `Payment for Bill ${found.billNumber}`,
+          reference: paymentNumber,
+          amount: -parsed.amount,
+          status: "unreconciled",
+          journalEntryId: journalEntry?.id || null,
+          sourceType: "manual",
+          currencyCode: found.currencyCode,
+        });
       }
 
       // Update bill amounts

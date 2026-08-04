@@ -793,7 +793,7 @@ export default function InvoiceDetailPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {bankAccounts.length > 0 && !["cash", "card"].includes(payMethod) && (
+                    {bankAccounts.length > 0 && (
                       <div className="space-y-2">
                         <Label>Bank Account</Label>
                         <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>

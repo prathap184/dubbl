@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { payment, paymentAllocation, invoice, bill } from "@/lib/db/schema";
+import { payment, paymentAllocation, invoice, bill, bankAccount, bankTransaction } from "@/lib/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { requireRole } from "@/lib/api/require-role";
@@ -192,6 +192,45 @@ export async function POST(request: Request) {
     // single transaction ensures that — or any other failure — rolls the whole
     // settlement back together instead of leaving orphaned/inconsistent rows.
     const { created } = await db.transaction(async (tx) => {
+      // Resolve bank account (from payload or fallback)
+      let selectedBankAccountId = parsed.bankAccountId || null;
+      if (!selectedBankAccountId) {
+        if (parsed.method === "cash") {
+          const cashBank = await tx.query.bankAccount.findFirst({
+            where: and(
+              eq(bankAccount.organizationId, ctx.organizationId),
+              eq(bankAccount.accountType, "cash"),
+              notDeleted(bankAccount.deletedAt)
+            ),
+          });
+          if (cashBank) selectedBankAccountId = cashBank.id;
+        } else {
+          const defaultBank = await tx.query.bankAccount.findFirst({
+            where: and(
+              eq(bankAccount.organizationId, ctx.organizationId),
+              notDeleted(bankAccount.deletedAt)
+            ),
+            orderBy: bankAccount.createdAt,
+          });
+          if (defaultBank) selectedBankAccountId = defaultBank.id;
+        }
+      }
+
+      // Look up target bank account to get its linked chart account code
+      let targetBankCode: string | undefined = undefined;
+      if (selectedBankAccountId) {
+        const targetBank = await tx.query.bankAccount.findFirst({
+          where: and(
+            eq(bankAccount.id, selectedBankAccountId),
+            eq(bankAccount.organizationId, ctx.organizationId)
+          ),
+          with: { chartAccount: true },
+        });
+        if (targetBank?.chartAccount?.code) {
+          targetBankCode = targetBank.chartAccount.code;
+        }
+      }
+
       // Create payment record
       const [created] = await tx
         .insert(payment)
@@ -206,7 +245,7 @@ export async function POST(request: Request) {
           method: parsed.method,
           reference: parsed.reference || null,
           notes: parsed.notes || null,
-          bankAccountId: parsed.bankAccountId || null,
+          bankAccountId: selectedBankAccountId,
           createdBy: ctx.userId,
         })
         .returning();
@@ -268,7 +307,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // Create journal entry
+      // Create journal entry with the resolved bank account code
       const journalEntry = await createPaymentJournalEntry(
         { organizationId: ctx.organizationId, userId: ctx.userId },
         {
@@ -276,6 +315,7 @@ export async function POST(request: Request) {
           reference: paymentNumber,
           amount: parsed.amount,
           date: parsed.date,
+          bankAccountCode: targetBankCode,
           allocations: journalAllocations,
         },
         tx
@@ -287,6 +327,23 @@ export async function POST(request: Request) {
           .update(payment)
           .set({ journalEntryId: journalEntry.id, updatedAt: new Date() })
           .where(eq(payment.id, created.id));
+      }
+
+      // Auto-create bank transaction for the selected bank account so it appears in Banking tab
+      if (selectedBankAccountId) {
+        const isReceived = parsed.type === "received";
+        const txAmount = isReceived ? parsed.amount : -parsed.amount;
+        await tx.insert(bankTransaction).values({
+          bankAccountId: selectedBankAccountId,
+          date: parsed.date,
+          description: `Payment for ${paymentNumber}`,
+          reference: paymentNumber,
+          amount: txAmount,
+          status: "unreconciled",
+          journalEntryId: journalEntry?.id || null,
+          sourceType: "manual",
+          currencyCode,
+        });
       }
 
       return { created, journalEntry };

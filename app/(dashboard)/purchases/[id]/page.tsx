@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BrandLoader } from "@/components/dashboard/brand-loader";
 import { ContentReveal } from "@/components/ui/content-reveal";
 import { useConfirm } from "@/lib/hooks/use-confirm";
@@ -75,6 +76,9 @@ export default function BillDetailPage() {
   const [loading, setLoading] = useState(true);
   const [payAmount, setPayAmount] = useState("");
   const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
+  const [payMethod, setPayMethod] = useState("bank_transfer");
+  const [payBankAccountId, setPayBankAccountId] = useState<string>("");
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string }[]>([]);
   const [payOpen, setPayOpen] = useState(false);
   const [creditingSupplier, setCreditingSupplier] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -149,13 +153,23 @@ export default function BillDetailPage() {
     }
   }
 
+  useEffect(() => {
+    if (!orgId || !payOpen) return;
+    fetch("/api/v1/bank-accounts", { headers: { "x-organization-id": orgId } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.bankAccounts) setBankAccounts(data.bankAccounts.map((a: { id: string; accountName: string }) => ({ id: a.id, name: a.accountName })));
+      })
+      .catch(() => {});
+  }, [orgId, payOpen]);
+
   async function handlePay() {
     if (!orgId) return;
     const amount = Math.round(parseFloat(payAmount) * 100);
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
     const res = await fetch(`/api/v1/bills/${id}/pay`, {
       method: "POST", headers: { "Content-Type": "application/json", "x-organization-id": orgId },
-      body: JSON.stringify({ amount, date: payDate }),
+      body: JSON.stringify({ amount, date: payDate, method: payMethod, bankAccountId: payBankAccountId || undefined }),
     });
     if (res.ok) { const data = await res.json(); setB((prev) => prev ? { ...prev, ...data.bill } : prev); setPayOpen(false); toast.success("Payment recorded"); }
     else toast.error("Failed");
@@ -323,6 +337,36 @@ export default function BillDetailPage() {
                       <Label>Date</Label>
                       <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Method</Label>
+                      <Select value={payMethod} onValueChange={setPayMethod}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="check">Check</SelectItem>
+                          <SelectItem value="card">Card</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {bankAccounts.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Bank Account</Label>
+                        <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select bank account (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((ba) => (
+                              <SelectItem key={ba.id} value={ba.id}>{ba.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <Button onClick={handlePay} className="w-full bg-emerald-600 hover:bg-emerald-700">Record Payment</Button>
                   </div>
                 </DialogContent>
