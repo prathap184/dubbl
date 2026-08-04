@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowDownRight,
   ArrowUpRight,
+  BookOpen,
   CircleDot,
   History,
   ListFilter,
@@ -97,12 +98,14 @@ export function useBankAccountContext() {
 const PAGE_TABS = [
   { value: "overview", label: "Overview", icon: Wallet, href: (id: string) => `/accounting/banking/${id}` },
   { value: "transactions", label: "Transactions", icon: ListFilter, href: (id: string) => `/accounting/banking/${id}/transactions` },
+  { value: "ledger", label: "Ledger", icon: BookOpen, href: (id: string) => `/accounting/banking/${id}/ledger` },
   { value: "imports", label: "Imports", icon: History, href: (id: string) => `/accounting/banking/${id}/imports` },
   { value: "settings", label: "Settings", icon: Settings2, href: (id: string) => `/accounting/banking/${id}/settings` },
 ] as const;
 
 function getActiveTab(pathname: string): string {
   if (pathname.endsWith("/transactions")) return "transactions";
+  if (pathname.endsWith("/ledger")) return "ledger";
   if (pathname.endsWith("/imports")) return "imports";
   if (pathname.endsWith("/settings")) return "settings";
   return "overview";
