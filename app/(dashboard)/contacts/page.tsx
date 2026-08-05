@@ -115,9 +115,7 @@ function buildColumns(onDelete: (c: Contact) => void, onOpen: (c: Contact) => vo
       className: "w-32 text-right",
       render: (r) => (
         <span className="text-sm tabular-nums text-muted-foreground">
-          {r.creditLimit != null
-            ? formatMoney(r.creditLimit, r.currencyCode || "INR")
-            : "No limit"}
+          {formatMoney(r.creditLimit ?? 0, r.currencyCode || "INR")}
         </span>
       ),
     },
