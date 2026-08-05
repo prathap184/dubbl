@@ -99,6 +99,16 @@ export function CreateDrawerProvider({ children }: { children: React.ReactNode }
   }, []);
   const close = useCallback(() => { setActiveType(null); setInitialData(undefined); }, []);
 
+  // Allow keyboard shortcuts to open drawers via window event
+  useEffect(() => {
+    const handleOpenDrawer = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.type) open(detail.type, detail.initialData);
+    };
+    window.addEventListener("open-drawer", handleOpenDrawer);
+    return () => window.removeEventListener("open-drawer", handleOpenDrawer);
+  }, [open]);
+
   return (
     <CreateDrawerContext.Provider value={{ open, close }}>
       {children}

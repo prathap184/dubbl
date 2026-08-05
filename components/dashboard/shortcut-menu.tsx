@@ -5,8 +5,11 @@ import { useGlobalShortcuts } from '@/hooks/use-global-shortcuts';
 import { X, ChevronRight, FileText, Activity, BookOpen, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { useCreateDrawer } from '@/components/dashboard/create-drawer';
+
 export function ShortcutMenu() {
   const { menuState, closeMenu, setMenuState } = useGlobalShortcuts();
+  const { open: openDrawer } = useCreateDrawer();
   const router = useRouter();
 
   // Prefetch routes in the background
@@ -52,9 +55,9 @@ export function ShortcutMenu() {
             <div className="grid grid-cols-1 gap-2">
               <ShortcutItem hotkey="F4" label="Contra" onClick={() => { router.push('/accounting/banking'); closeMenu(); }} />
               <ShortcutItem hotkey="F5" label="Payment" onClick={() => { router.push('/purchases'); closeMenu(); }} />
-              <ShortcutItem hotkey="F6" label="Receipt entry (sync) / gpay or cash" onClick={() => { router.push('/sales/customer-prepayments'); closeMenu(); }} />
+              <ShortcutItem hotkey="F6" label="Receipt entry (sync) / gpay or cash" onClick={() => { openDrawer("customerCredit"); closeMenu(); }} />
               <ShortcutItem hotkey="F7" label="Journal" onClick={() => { router.push('/accounting'); closeMenu(); }} />
-              <ShortcutItem hotkey="F8" label="Invoice" onClick={() => { router.push('/sales'); closeMenu(); }} />
+              <ShortcutItem hotkey="F8" label="Invoice" onClick={() => { openDrawer("invoice"); closeMenu(); }} />
               <ShortcutItem hotkey="F10" label="Quote" onClick={() => { window.location.href = 'http://localhost:3000/quotation-builder'; }} />
             </div>
           )}
