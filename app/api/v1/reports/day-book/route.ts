@@ -27,9 +27,9 @@ export async function GET(request: Request) {
         .from(bankTransaction)
         .where(
           and(
-            eq(bankTransaction.organizationId, ctx.organizationId),
-            lte(bankTransaction.transactionDate, new Date(startOfDay.getTime() - 86400000).toISOString().split("T")[0]),
-            isNull(bankTransaction.deletedAt)
+            eq((bankTransaction as any).orgId || (bankTransaction as any).organizationId, ctx.organizationId),
+            lte((bankTransaction as any).date || (bankTransaction as any).transactionDate, new Date(startOfDay.getTime() - 86400000).toISOString().split("T")[0]),
+            isNull((bankTransaction as any).deletedAt)
           )
         );
       openingBalance = (openingRow?.total || 0) / 100;

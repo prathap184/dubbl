@@ -58,7 +58,7 @@ export async function GET(
           and(
             eq(journalLine.accountId, accountId),
             eq(journalEntry.organizationId, ctx.organizationId),
-            lt(journalEntry.date, new Date(from))
+            lt(journalEntry.date, from)
           )
         );
 
@@ -73,8 +73,8 @@ export async function GET(
       eq(journalEntry.organizationId, ctx.organizationId),
     ];
 
-    if (from) conditions.push(gte(journalEntry.date, new Date(from)));
-    if (to) conditions.push(lte(journalEntry.date, new Date(to + "T23:59:59")));
+    if (from) conditions.push(gte(journalEntry.date, from));
+    if (to) conditions.push(lte(journalEntry.date, to));
 
     const rows = await db
       .select({
